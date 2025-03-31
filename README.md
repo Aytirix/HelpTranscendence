@@ -14,6 +14,6 @@ Ce projet, réalisé dans le cadre du cursus de l'École 42, a pour objectif de 
 
 ## Base de donnees
 Pour l'instant on va utiliser la base de donnees sur mon serveur.
-  - url      : [Cliquez ici](https://www.figma.com/board/TEviHsREY663xd6BxfD1UQ/ft_irc?node-id=0-1&p=f)
+  - url      : [Cliquez ici](https://phpmyadmin.theomouty.fr/)
   - user     : ```user_transcendence```
   - password : ```*NYwDqpPBEEBETti```
