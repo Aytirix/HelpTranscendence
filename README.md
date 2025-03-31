@@ -6,7 +6,6 @@ Ce projet, réalisé dans le cadre du cursus de l'École 42, a pour objectif de 
 
 - [Prérequis](#prérequis)
 - [Installation](#installation)
-- [Configuration de la base de données](#configuration-de-la-base-de-données)
 - [Lancement de l'application](#lancement-de-lapplication)
 - [Fonctionnalités](#fonctionnalités)
 - [Structure de la base de données](#structure-de-la-base-de-données)
@@ -15,6 +14,6 @@ Ce projet, réalisé dans le cadre du cursus de l'École 42, a pour objectif de 
 
 ## Base de donnees
 Pour l'instant on va utiliser la base de donnees sur mon serveur.
-- https://phpmyadmin.theomouty.fr/
-  - user : ```user_transcendence```
+  - url      : [--> Cliquez ici <--](https://www.figma.com/board/TEviHsREY663xd6BxfD1UQ/ft_irc?node-id=0-1&p=f).
+  - user     : ```user_transcendence```
   - password : ```*NYwDqpPBEEBETti```
