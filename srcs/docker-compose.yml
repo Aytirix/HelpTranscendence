@@ -1,0 +1,54 @@
+services:
+
+  backend:
+      build:
+        context: backend
+        dockerfile: Dockerfile
+      container_name: backend
+      volumes:
+        - backend_data:/var/www/html/backend
+        - sqlite_data:/var/lib/sqlite
+      ports:
+        - "7000:7000"
+      restart: always
+      networks:
+        - iron_network
+
+  adminer:
+      image: adminer
+      container_name: adminer
+      volumes:
+       - sqlite_data:/var/lib/sqlite
+      environment:
+       ADMINER_DEFAULT_DB: sqlite
+      ports:
+        - "127.0.0.1:8080:8080"
+      depends_on:
+        - backend
+      restart: always
+      networks:
+        - iron_network
+
+volumes:
+ backend_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/srcs/backend/api
+      o: bind
+ frontend_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/srcs/frontend
+      o: bind
+ sqlite_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/srcs/sqlite
+      o: bind
+
+networks:
+ iron_network:
+    driver: bridge
