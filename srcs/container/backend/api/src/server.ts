@@ -19,7 +19,6 @@ app.register(fastifyHelmet);
 app.register(fastifyRateLimit, { max: 500, timeWindow: '1 minute' });
 app.register(fastifySecureSession, { secret: process.env.SESSION_SECRET, salt: process.env.SESSION_SALT, cookie: { secure: true } });
 
-
 // Enregistrement des routes
 app.register(userRoutes);
 

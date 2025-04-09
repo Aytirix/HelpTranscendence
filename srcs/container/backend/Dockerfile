@@ -29,5 +29,5 @@ EXPOSE 7000
 
 # Démarrer l'application avec PM2
 # CMD ["pm2-runtime", "start", "server.js"]
-CMD ["npm", "run", "watch"]
-# CMD ["sleep", "infinity"]
+# CMD ["npm", "run", "watch"]
+CMD ["sleep", "infinity"]

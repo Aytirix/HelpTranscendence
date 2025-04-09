@@ -1,54 +1,79 @@
 services:
 
   backend:
-      build:
-        context: backend
-        dockerfile: Dockerfile
-      container_name: backend
-      volumes:
-        - backend_data:/var/www/html/backend
-        - sqlite_data:/var/lib/sqlite
-      ports:
-        - "7000:7000"
-      restart: always
-      networks:
-        - iron_network
+    build:
+      context: container/backend
+      dockerfile: Dockerfile
+    container_name: backend
+    volumes:
+      - backend_data:/var/www/html/backend
+    ports:
+      - "7000:7000"
+    restart: always
+    networks:
+      - iron_network
 
-  adminer:
-      image: adminer
-      container_name: adminer
-      volumes:
-       - sqlite_data:/var/lib/sqlite
-      environment:
-       ADMINER_DEFAULT_DB: sqlite
-      ports:
-        - "127.0.0.1:8080:8080"
-      depends_on:
-        - backend
-      restart: always
-      networks:
-        - iron_network
+  # mariadb:
+  #   build:
+  #     context: container/mariadb
+  #     dockerfile: Dockerfile
+  #   container_name: mariadb
+  #   volumes:
+  #     - sqlite_data:/var/lib/mysql
+  #   ports:
+  #     - "3306"
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+  #     MYSQL_USER: ${MYSQL_USER}
+  #     MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  #     MYSQL_DATABASE: ${MYSQL_DATABASE}
+  #   restart: always
+  #   networks:
+  #     - iron_network
+
+  # phpmyadmin:
+  #   image: phpmyadmin
+  #   container_name: phpmyadmin
+  #   depends_on:
+  #     - mariadb
+  #   ports:
+  #     - "8080:80"
+  #   environment:
+  #     PMA_HOST: mariadb
+  #     PMA_USER: ${MYSQL_USER}
+  #     PMA_PASSWORD: ${MYSQL_PASSWORD}
+  #     PMA_PORT: 3306
+  #   restart: always
+  #   networks:
+  #     - iron_network
+
+  # sqlitebrowser:
+  #   image: linuxserver/sqlitebrowser
+  #   container_name: sqlitebrowser
+  #   volumes:
+  #     - sqlite_data:/var/lib/sqlite
+  #   ports:
+  #     - "127.0.0.1:3001:3001"
+  #   depends_on:
+  #     - backend
+  #   restart: always
+  #   networks:
+  #   - iron_network
 
 volumes:
- backend_data:
+  backend_data:
     driver: local
     driver_opts:
       type: none
-      device: ${PWD}/srcs/backend/api
+      device: ${PWD}/srcs/container/backend/api
       o: bind
- frontend_data:
+  frontend_data:
     driver: local
     driver_opts:
       type: none
-      device: ${PWD}/srcs/frontend
-      o: bind
- sqlite_data:
-    driver: local
-    driver_opts:
-      type: none
-      device: ${PWD}/srcs/sqlite
+      device: ${PWD}/srcs/container/frontend
       o: bind
 
 networks:
- iron_network:
+  iron_network:
     driver: bridge
