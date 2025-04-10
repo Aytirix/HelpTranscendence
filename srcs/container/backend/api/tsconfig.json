@@ -1,14 +1,16 @@
 {
 	"compilerOptions": {
-		"target": "es2016",
+		"target": "ES2024",
 		"module": "commonjs",
 		"rootDir": "./src",
 		"outDir": "./dist",
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"skipLibCheck": true,
+		"declaration": true,
+		"declarationDir": "./src/types",
 	},
-	"include": ["src", "src/types/**/*.d.ts"],
+	"include": ["src/**/*"],
 	"exclude": [
 		"node_modules",
 		"dist"

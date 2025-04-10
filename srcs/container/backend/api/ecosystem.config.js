@@ -4,7 +4,7 @@ module.exports = {
 			name: "api_transcendence",
 			script: "src/server.ts",
 			interpreter: "ts-node",
-			interpreter_args: "--transpile-only --project tsconfig.json",
+			interpreter_args: "--project tsconfig.json",
 			watch: ["src"],
 			ignore_watch: ["node_modules"],
 			watch_options: {

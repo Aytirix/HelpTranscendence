@@ -8,7 +8,7 @@ export const getAllUsers = async (req: FastifyRequest, reply: FastifyReply) => {
 	const user = users[0];
 	req.session.user = user;
 
-	return reply.send(users);
+	return reply.send(req.session.user);
 };
 
 // export const createNewUser = async (request: FastifyRequest, reply: FastifyReply) => {

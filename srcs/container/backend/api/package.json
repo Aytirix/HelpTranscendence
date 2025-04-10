@@ -4,7 +4,8 @@
 	"main": "index.js",
 	"scripts": {
 		"start": "pm2-runtime start ecosystem.config.js",
-		"stop": "pm2-runtime delete api_transcendence"
+		"restart": "pm2 restart api_transcendence",
+		"stop": "pm2 delete api_transcendence"
 	},
 	"keywords": [],
 	"author": "",
