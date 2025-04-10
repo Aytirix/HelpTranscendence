@@ -6,7 +6,9 @@ services:
       dockerfile: Dockerfile
     container_name: backend
     volumes:
-      - backend_data:/var/www/html/backend
+      - backend_data:${BACKEND_PATH}
+      - data:${DATA_PATH}
+    working_dir: ${BACKEND_PATH}
     ports:
       - "7000:7000"
     restart: always
@@ -61,11 +63,17 @@ services:
   #   - iron_network
 
 volumes:
+  data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DATA_PATH}
+      o: bind
   backend_data:
     driver: local
     driver_opts:
       type: none
-      device: ${PWD}/srcs/container/backend/api
+      device: ${BACKEND_PATH}
       o: bind
   frontend_data:
     driver: local

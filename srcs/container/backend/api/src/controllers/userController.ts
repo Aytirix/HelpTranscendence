@@ -1,11 +1,14 @@
 // src/controllers/userController.ts
-import { getUsers } from '../models/userModel';
+import { getUsers, User } from '../models/userModel';
 import { FastifyRequest, FastifyReply } from 'fastify';
 
-export const getAllUsers = async (request: FastifyRequest, reply: FastifyReply) => {
-  const users = await getUsers()
-  console.log('users :', users);
-  return reply.send(users);
+export const getAllUsers = async (req: FastifyRequest, reply: FastifyReply) => {
+	const users = await getUsers()
+	//   prendre le 1er utilisateur
+	const user = users[0];
+	req.session.user = user;
+
+	return reply.send(users);
 };
 
 // export const createNewUser = async (request: FastifyRequest, reply: FastifyReply) => {

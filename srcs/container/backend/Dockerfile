@@ -1,5 +1,5 @@
 # Utiliser une image officielle Node.js
-FROM node:18
+FROM node:18-slim
 
 RUN apt-get update && apt-get install -y \
 	git \
@@ -14,9 +14,6 @@ RUN touch /var/lib/sqlite/db.sqlite
 RUN npm install -g pm2
 RUN npm install -g fastify
 
-# Définir le répertoire de travail
-WORKDIR /var/www/html/backend
-
 # Copier les fichiers de l'application
 COPY api/ .
 
@@ -25,9 +22,5 @@ RUN npm install
 # Installer les dépendances de développement
 RUN npm install -g ts-node ts-node-dev
 
-EXPOSE 7000
-
-# Démarrer l'application avec PM2
-# CMD ["pm2-runtime", "start", "server.js"]
-# CMD ["npm", "run", "watch"]
-CMD ["sleep", "infinity"]
+# Démarrer l'api
+CMD ["npm", "run", "start"]

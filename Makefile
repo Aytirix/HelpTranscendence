@@ -16,6 +16,10 @@ stop:
 start:
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) start
 
+log api:
+	clear
+	docker exec -it backend pm2 logs api_transcendence
+
 re: down build up
 
 exec:

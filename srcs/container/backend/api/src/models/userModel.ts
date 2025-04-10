@@ -1,6 +1,6 @@
 import executeReq from './database';
 
-interface User {
+export interface User {
 	id: number;
 	username: string;
 	email: string;
@@ -10,8 +10,7 @@ interface User {
 
 export const getUsers = async (): Promise<User[]> => {
 	const result = await executeReq('SELECT * FROM users');
-	console.log('result :', result);
-	return (result as any[]).map((user: any) => ({
+	return (result as any[]).map((user: User) => ({
 		id: user.id,
 		username: user.username,
 		email: user.email,

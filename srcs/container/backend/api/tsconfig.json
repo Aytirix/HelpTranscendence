@@ -6,12 +6,9 @@
 		"outDir": "./dist",
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
 	},
-	"include": [
-		"src/**/*.ts",
-	],
-	// Exclure les fichiers et dossiers spécifiques
+	"include": ["src", "src/types/**/*.d.ts"],
 	"exclude": [
 		"node_modules",
 		"dist"

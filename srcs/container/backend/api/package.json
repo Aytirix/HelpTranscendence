@@ -3,24 +3,25 @@
 	"version": "1.0.0",
 	"main": "index.js",
 	"scripts": {
-		"start": "ts-node-dev src/server.ts",
-		"watch": "ts-node-dev --respawn src/server.ts"
+		"start": "pm2-runtime start ecosystem.config.js",
+		"stop": "pm2-runtime delete api_transcendence"
 	},
 	"keywords": [],
 	"author": "",
 	"license": "ISC",
 	"description": "",
 	"dependencies": {
-		"@fastify/cors": "^11.0.1",
+		"@fastify/cookie": "^11.0.2",
 		"@fastify/helmet": "^13.0.1",
 		"@fastify/multipart": "^9.0.3",
 		"@fastify/rate-limit": "^10.2.2",
-		"@fastify/secure-session": "^8.1.1",
+		"@fastify/session": "^11.1.0",
 		"@fastify/websocket": "^11.0.2",
 		"ajv": "^8.12.0",
 		"bcrypt": "^5.1.1",
 		"better-sqlite3": "^9.2.0",
 		"dotenv": "^16.3.1",
+		"express-mysql-session": "^3.0.3",
 		"fastify": "^5.2.2",
 		"mysql2": "^3.14.0"
 	},
