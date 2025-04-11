@@ -1,16 +1,58 @@
 services:
 
+  nginx:
+    build:
+      args:
+        NODE_PROJET: ${NODE_PROJET}
+        FRONTEND_PATH: ${FRONTEND_PATH}
+      context: container/nginx
+      dockerfile: Dockerfile
+    container_name: nginx
+    depends_on:
+      - backend
+      - frontend
+    environment:
+      NODE_PROJET: ${NODE_PROJET}
+      FRONTEND_PATH: ${FRONTEND_PATH}
+    ports:
+      - "3000:443"
+      - "7000:7000"
+    volumes:
+      - backend_data:${BACKEND_PATH}
+      - frontend_data:${FRONTEND_PATH}
+      - data:/etc/nginx/ssl
+    restart: always
+    networks:
+      - iron_network
+
   backend:
     build:
       context: container/backend
       dockerfile: Dockerfile
     container_name: backend
+    environment:
+      - NODE_PROJET=${NODE_PROJET}
     volumes:
       - backend_data:${BACKEND_PATH}
-      - data:${DATA_PATH}
     working_dir: ${BACKEND_PATH}
     ports:
-      - "7000:7000"
+      - "7000"
+    restart: always
+    networks:
+      - iron_network
+
+  frontend:
+    build:
+      context: container/frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    environment:
+      - MODE=${MODE}
+    volumes:
+      - frontend_data:${FRONTEND_PATH}
+    working_dir: ${FRONTEND_PATH}
+    ports:
+      - "3000"
     restart: always
     networks:
       - iron_network
@@ -79,7 +121,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${PWD}/srcs/container/frontend
+      device: ${FRONTEND_PATH}
       o: bind
 
 networks:

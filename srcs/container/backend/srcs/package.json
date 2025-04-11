@@ -1,10 +1,10 @@
 {
-	"name": "api",
+	"name": "api_transcendence",
 	"version": "1.0.0",
 	"main": "index.js",
 	"scripts": {
-		"start": "pm2-runtime start ecosystem.config.js",
-		"restart": "pm2 restart api_transcendence",
+		"dev": "pm2-runtime start config/dev.ecosystem.config.js",
+		"prod": "pm2-runtime start config/prod.ecosystem.config.js",
 		"stop": "pm2 delete api_transcendence"
 	},
 	"keywords": [],

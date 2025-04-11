@@ -12,9 +12,7 @@ RUN mkdir -p /var/lib/sqlite
 RUN touch /var/lib/sqlite/db.sqlite
 
 # Copier les fichiers de l'application
-COPY api/ .
-RUN chmod +x ./start.sh
+COPY srcs/ .
+RUN chmod +x ./config/start.sh
 
-# Démarrer l'api
-
-ENTRYPOINT ["/bin/bash", "./start.sh"]
+ENTRYPOINT ["/bin/bash", "./config/start.sh"]

@@ -56,7 +56,7 @@ npm install
 ## Lancement de l'application
 Cela va lancer les conteneurs Docker nécessaires à l'application. Vous pouvez ensuite accéder à l'application via votre navigateur à l'adresse suivante : [https://localhost:3000](https://localhost:3000) :
 ```bash
-make
+make build
 ```
 
 Lancer l'application si elle a déjà été compilée :

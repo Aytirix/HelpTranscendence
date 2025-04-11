@@ -8,7 +8,7 @@
 		"forceConsistentCasingInFileNames": true,
 		"skipLibCheck": true,
 		"declaration": true,
-		"declarationDir": "./src/types",
+		"declarationDir": "./dist/types",
 	},
 	"include": ["src/**/*"],
 	"exclude": [

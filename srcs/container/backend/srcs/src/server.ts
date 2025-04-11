@@ -1,7 +1,5 @@
 /// <reference path="./types/global.d.ts" />
 import * as dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
 import fastify from 'fastify';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyWebsocket from '@fastify/websocket';
@@ -16,12 +14,9 @@ import userRoutes from './routes/userRoutes';
 
 dotenv.config();
 
-const app = fastify({
-	https: {
-		key: fs.readFileSync(path.join(__dirname, '../../../../data/cert/key.pem')),
-		cert: fs.readFileSync(path.join(__dirname, '../../../../data/cert/cert.pem')),
-	},
-});
+const NODE_PROJET = process.env.NODE_PROJET || 'production';
+
+const app = fastify();
 
 (async () => {
 	await setupSwagger(app);
@@ -33,7 +28,6 @@ app.register(fastifyHelmet);
 app.register(fastifyRateLimit, {
 	max: 500,
 	timeWindow: '1 minute',
-	keyGenerator: (req) => req.session.user.id || req.ip,
 	errorResponseBuilder: (req, context) => {
 		return {
 			statusCode: 429,
