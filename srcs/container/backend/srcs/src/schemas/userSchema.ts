@@ -2,7 +2,7 @@ import { messageResponse } from './common';
 import i18n from '@i18n';
 
 export const login = {
-	description: 'Connexion utilisateur',
+	description: "Connexion utilisateur. Tant qu'il a un cookie sessionId coté client, il peut être considéré comme connecté.",
 	tags: ['auth'],
 	body: {
 		type: 'object',

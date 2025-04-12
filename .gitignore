@@ -2,3 +2,4 @@
 **/node_modules
 **/package-lock.json
 **/dist
+srcs/container/backend/srcs/logs
