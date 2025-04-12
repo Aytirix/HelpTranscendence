@@ -6,7 +6,7 @@ DOCKER_COMPOSE=docker-compose
 dev:
 	NODE_PROJET=dev $(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) up --build -d
 
-build:
+build: down
 	NODE_PROJET=production $(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) up --build -d
 
 down:
@@ -29,7 +29,7 @@ lb:
 	clear
 	docker exec -it backend pm2 logs api_transcendence
 
-re: down build
+re: down dev
 
 exec:
 	docker exec -it $$(docker ps --format "{{.Names}}" | head -n 1) zsh

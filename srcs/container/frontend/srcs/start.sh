@@ -1,8 +1,15 @@
 # Installer globalement
-npm install -g ts-node ts-node-dev pm2
+npm install -g typescript ts-node ts-node-dev pm2
 
 # Installer les dépendances
 npm install
 
 # démarrer le serveur
-npm run dev
+
+echo "Starting the server... to $NODE_PROJET"
+if [ "$NODE_PROJET" = "production" ]; then
+	tsc --project tsconfig.json
+	npm run build
+else
+	npm run dev
+fi
