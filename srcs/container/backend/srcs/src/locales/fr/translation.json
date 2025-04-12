@@ -1,0 +1,30 @@
+{
+	"unauthorized": "Veuillez vous connecter pour accéder à cette ressource.",
+	"required": "Merci de remplir tous les champs obligatoires.",
+	"errors": {
+		"email": {
+			"alreadyExists": "Cette adresse e-mail est déjà utilisée.",
+			"invalid": "Veuillez entrer une adresse e-mail ou un nom d\\'utilisateur valide."
+		},
+		"username": {
+			"required": "Le nom d'utilisateur est requis.",
+			"invalid": "Le nom d'utilisateur doit contenir entre 3 et 15 caractères, sans espaces ni caractères spéciaux.",
+			"alreadyExists": "Ce nom d'utilisateur est déjà pris."
+		},
+		"password": {
+			"required": "Le mot de passe est requis.",
+			"invalid": "Le mot de passe doit contenir entre 8 et 25 caractères, au moins une lettre majuscule, une lettre minuscule, un chiffre et un caractère spécial.",
+			"notMatching": "Le mot de passe et la confirmation du mot de passe ne correspondent pas"
+		},
+		"lang": {
+			"required": "La langue est requise.",
+			"invalid": "La langue doit être FR, EN ou JP."
+		}
+	},
+	"login": {
+		"failed": "L'adresse e-mail ou le mot de passe est incorrect.",
+		"success": "Vous êtes maintenant connecté.",
+		"welcome": "Bienvenue !",
+		"logout": "Déconnexion réussie."
+	}
+}

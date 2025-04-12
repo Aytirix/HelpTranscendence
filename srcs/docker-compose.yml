@@ -20,7 +20,7 @@ services:
     volumes:
       - backend_data:${BACKEND_PATH}
       - frontend_data:${FRONTEND_PATH}
-      - data:/etc/nginx/ssl
+      - shared:/etc/nginx/ssl
     restart: always
     networks:
       - iron_network
@@ -48,7 +48,6 @@ services:
     container_name: frontend
     environment:
       - NODE_PROJET=${NODE_PROJET}
-      - FRONTEND_PORT=${FRONTEND_PORT}
     volumes:
       - frontend_data:${FRONTEND_PATH}
     working_dir: ${FRONTEND_PATH}
@@ -106,11 +105,11 @@ services:
   #   - iron_network
 
 volumes:
-  data:
+  shared:
     driver: local
     driver_opts:
       type: none
-      device: ${DATA_PATH}
+      device: ${SHARED_PATH}
       o: bind
   backend_data:
     driver: local

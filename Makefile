@@ -22,7 +22,7 @@ stop:
 # log frontend
 lf:
 	clear
-	docker exec -it frontend
+	docker logs -f frontend
 
 # log backend
 lb:
@@ -30,9 +30,6 @@ lb:
 	docker exec -it backend pm2 logs api_transcendence
 
 re: down dev
-
-exec:
-	docker exec -it $$(docker ps --format "{{.Names}}" | head -n 1) zsh
 
 logs:
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) logs -f

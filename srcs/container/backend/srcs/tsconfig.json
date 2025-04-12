@@ -9,6 +9,15 @@
 		"skipLibCheck": true,
 		"declaration": true,
 		"declarationDir": "./dist/types",
+		"paths": {
+			"@i18n": ["./src/i18n"],
+			"@tools": ["./src/tools"],
+			"@Middleware": ["./src/Middleware"],
+			"@types": ["./src/types/types"],
+			"@schemas/*": ["./src/schemas/*"],
+			"@models/*": ["./src/models/*"],
+			"@controllers/*": ["./src/controllers/*"],
+		  }
 	},
 	"include": ["src/**/*"],
 	"exclude": [
