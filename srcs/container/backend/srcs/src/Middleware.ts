@@ -2,22 +2,20 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyHelmet from '@fastify/helmet';
 
-async function isNotAuthenticated(request: FastifyRequest, reply: FastifyReply, done: any) {
+async function isNotAuthenticated(request: FastifyRequest, reply: FastifyReply) {
 	if (request.session.user !== undefined) {
 		return reply.status(403).send({
 			message: request.i18n.t('login.alreadyLoggedIn'),
 		});
 	}
-	done();
 }
 
-export async function isAuthenticated(request: FastifyRequest, reply: FastifyReply, done: any) {
+export async function isAuthenticated(request: FastifyRequest, reply: FastifyReply) {
 	if (request.session.user === undefined) {
 		return reply.status(401).send({
 			message: request.i18n.t('login.notLoggedIn'),
 		});
 	}
-	done();
 }
 
 export async function registerRateLimit(app: FastifyInstance) {

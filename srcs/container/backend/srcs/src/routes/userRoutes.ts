@@ -5,20 +5,26 @@ import Middleware from '@Middleware';
 
 export default async (fastify: FastifyInstance) => {
 	fastify.get('/', {
-		preHandler: Middleware.isAuthenticated,
+		preHandler: [Middleware.isAuthenticated],
 		handler: userController.getAllUsers
 	});
 
 	fastify.post('/login', {
-		preHandler: Middleware.isNotAuthenticated,
+		preHandler: [Middleware.isNotAuthenticated],
 		schema: userSchema.login,
 		handler: userController.Login
 	});
 
 	fastify.post('/register', {
-		preHandler: Middleware.isNotAuthenticated,
+		preHandler: [Middleware.isNotAuthenticated],
 		schema: userSchema.register,
 		handler: userController.Register
+	});
+
+	fastify.put('/update-user', {
+		preHandler: [Middleware.isAuthenticated],
+		schema: userSchema.update,
+		handler: userController.UpdateUser
 	});
 
 	fastify.get('/logout', {

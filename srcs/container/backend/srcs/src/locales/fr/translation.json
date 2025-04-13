@@ -2,10 +2,13 @@
 	"required": "Merci de remplir tous les champs obligatoires.",
 	"errors": {
 		"NoadditionalProperties" : "Aucune propriété supplémentaire n'est autorisée.",
+		"user" : {
+			"noChanges" : "Aucun changement a été détecté."
+		},
 		"email": {
 			"required": "L'adresse e-mail est requise.",
 			"alreadyExists": "Cette adresse e-mail est déjà utilisée.",
-			"invalid": "Veuillez entrer une adresse e-mail ou un nom d\\'utilisateur valide."
+			"invalid": "Veuillez entrer une adresse e-mail"
 		},
 		"username": {
 			"required": "Le nom d'utilisateur est requis.",
@@ -19,7 +22,7 @@
 		},
 		"lang": {
 			"required": "La langue est requise.",
-			"invalid": "La langue doit être FR, EN ou JP."
+			"invalid": "La langue doit être fr, en ou jp."
 		}
 	},
 	"login": {
@@ -29,5 +32,8 @@
 		"notLoggedIn": "Veuillez vous connecter pour accéder à cette ressource.",
 		"welcome": "Bienvenue !",
 		"logout": "Déconnexion réussie."
+	},
+	"user": {
+		"updateSuccess": "Utilisateur mis à jour avec succès."
 	}
 }

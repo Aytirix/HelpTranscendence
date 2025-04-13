@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import userModel from '@models/userModel';
 import i18n from '@i18n';
+import { Query } from 'mysql2/typings/mysql/lib/protocol/sequences/Query';
 
 export const getAllUsers = async (req: FastifyRequest, reply: FastifyReply) => {
 
@@ -56,6 +57,72 @@ export const Register = async (request: FastifyRequest, reply: FastifyReply) => 
 	});
 };
 
+export const UpdateUser = async (request: FastifyRequest, reply: FastifyReply) => {
+	const body = request.body as {
+		email: string | null;
+		username: string | null;
+		password: string | null;
+		confirmPassword: string | null;
+		lang: string | null;
+	};
+
+	const email = body.email || null;
+	const username = body.username || null;
+	const password = body.password || null;
+	const confirmPassword = body.confirmPassword || null;
+	const lang = body.lang || null;
+
+	if (!email && !username && !password && !confirmPassword && !lang) {
+		return reply.status(400).send({
+			message: request.i18n.t('errors.user.noChanges'),
+		});
+	}
+
+	const user = request.session.user;
+
+	console.log('=====================');
+	console.log('change user');
+	console.log(`email: ${email} | ${user.email}`);
+	console.log(`username: ${username} | ${user.username}`);
+	console.log(`password: ${password}`);
+	console.log(`confirmPassword: ${confirmPassword}`);
+	console.log(`lang: ${lang} | ${user.lang}`);
+
+	if (email && email !== user.email && await userModel.emailAlreadyExists(email)) {
+		return reply.status(409).send({
+			message: request.i18n.t('errors.email.alreadyExists'),
+		});
+	}
+
+	if (username && username !== user.username && await userModel.usernameAlreadyExists(username)) {
+		return reply.status(409).send({
+			message: request.i18n.t('errors.username.alreadyExists'),
+		});
+	}
+
+	if (password !== confirmPassword) {
+		return reply.status(400).send({
+			message: request.i18n.t('errors.password.notMatching'),
+		});
+	}
+
+	if (lang && lang !== user.lang) {
+		request.i18n.changeLanguage(lang);
+	}
+
+
+	await userModel.UpdateUser(user.id.toString(), email, username, password, lang);
+	request.session.user = {
+		...user,
+		email: email || user.email,
+		username: username || user.username,
+		lang: lang || user.lang,
+	};
+	return reply.send({
+		message: `email: ${email || user.email}, username: ${username || user.username}, lang: ${lang || user.lang}`,
+	});
+}
+
 export const Logout = async (request: FastifyRequest, reply: FastifyReply, msg: boolean = true) => {
 	await request.session.destroy();
 	if (!reply.sent) {
@@ -73,5 +140,6 @@ export default {
 	getAllUsers,
 	Login,
 	Register,
+	UpdateUser,
 	Logout,
 };

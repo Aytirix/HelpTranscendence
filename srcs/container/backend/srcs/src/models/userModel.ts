@@ -65,10 +65,41 @@ export const usernameAlreadyExists = async (username: string): Promise<boolean> 
 	return true;
 };
 
+export const UpdateUser = async (id: string, email: string = null, username: string = null, password: string = null, lang: string = null): Promise<void> => {
+	const updates: string[] = [];
+	const params: (string | null)[] = [];
+
+	if (email) {
+		updates.push('email = ?');
+		params.push(email);
+	}
+
+	if (username) {
+		updates.push('username = ?');
+		params.push(username);
+	}
+
+	if (password) {
+		const hashedPassword = await tools.hashPassword(password);
+		updates.push('password = ?');
+		params.push(hashedPassword);
+	}
+
+	if (lang) {
+		updates.push('lang = ?');
+		params.push(lang);
+	}
+
+	params.push(id);
+
+	await executeReq(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+};
+
 export default {
 	getUsers,
 	Login,
 	Register,
 	emailAlreadyExists,
 	usernameAlreadyExists,
+	UpdateUser,
 };

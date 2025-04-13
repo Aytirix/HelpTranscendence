@@ -24,6 +24,7 @@
 		"ajv-errors": "^3.0.0",
 		"bcrypt": "^5.1.1",
 		"better-sqlite3": "^9.2.0",
+		"connect-sqlite3": "^0.9.15",
 		"dotenv": "^16.3.1",
 		"express-mysql-session": "^3.0.3",
 		"fastify": "^5.2.2",
