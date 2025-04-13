@@ -1,5 +1,4 @@
 import { messageResponse } from './common';
-import i18n from '@i18n';
 
 export const login = {
 	description: "Connexion utilisateur. Tant qu'il a un cookie sessionId coté client, il peut être considéré comme connecté.",
@@ -15,14 +14,14 @@ export const login = {
 		additionalProperties: false,
 		errorMessage: {
 			required: {
-				email: i18n.t('login.failed'),
-				password: i18n.t('login.failed'),
+				email: 'login.failed',
+				password: 'login.failed',
 			},
 			properties: {
-				email: i18n.t('error.email.invalid'),
-				password: i18n.t('error.password.invalid'),
+				email: 'error.email.invalid',
+				password: 'error.password.invalid',
 			},
-			additionalProperties: 'Des propriétés supplémentaires ne sont pas autorisées.',
+			additionalProperties: 'errors.NoadditionalProperties',
 		}
 	},
 	response: {
@@ -56,16 +55,17 @@ export const register = {
 		required: [...login.body.required, 'username', 'confirmPassword'],
 		errorMessage: {
 			required: {
-				...login.body.errorMessage.required,
-				username: i18n.t('errors.username.required'),
-				confirmPassword: i18n.t('errors.password.required'),
-				lang: i18n.t('errors.lang.required'),
+				email: 'errors.email.required',
+				password: 'errors.password.required',
+				username: 'errors.username.required',
+				confirmPassword: 'errors.password.required',
+				lang: 'errors.lang.required',
 			},
 			properties: {
 				...login.body.errorMessage.properties,
-				username: i18n.t('errors.username.invalid'),
-				confirmPassword: i18n.t('errors.password.notMatching'),
-				lang: i18n.t('errors.lang.invalid'),
+				username: 'errors.username.invalid',
+				confirmPassword: 'errors.password.notMatching',
+				lang: 'errors.lang.invalid',
 			},
 		}
 	},

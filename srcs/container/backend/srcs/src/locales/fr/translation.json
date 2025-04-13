@@ -1,8 +1,9 @@
 {
-	"unauthorized": "Veuillez vous connecter pour accéder à cette ressource.",
 	"required": "Merci de remplir tous les champs obligatoires.",
 	"errors": {
+		"NoadditionalProperties" : "Aucune propriété supplémentaire n'est autorisée.",
 		"email": {
+			"required": "L'adresse e-mail est requise.",
 			"alreadyExists": "Cette adresse e-mail est déjà utilisée.",
 			"invalid": "Veuillez entrer une adresse e-mail ou un nom d\\'utilisateur valide."
 		},
@@ -24,6 +25,8 @@
 	"login": {
 		"failed": "L'adresse e-mail ou le mot de passe est incorrect.",
 		"success": "Vous êtes maintenant connecté.",
+		"alreadyLoggedIn": "Vous êtes déjà connecté.",
+		"notLoggedIn": "Veuillez vous connecter pour accéder à cette ressource.",
 		"welcome": "Bienvenue !",
 		"logout": "Déconnexion réussie."
 	}

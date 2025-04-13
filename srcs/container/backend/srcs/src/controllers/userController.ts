@@ -14,14 +14,14 @@ export const Login = async (request: FastifyRequest, reply: FastifyReply) => {
 
 	if (user === null) {
 		return reply.status(401).send({
-			message: i18n.t('login.failed'),
+			message: request.i18n.t('login.failed'),
 		});
 	}
 
 	request.session.user = user;
 
 	return reply.send({
-		message: i18n.t('login.welcome'),
+		message: request.i18n.t('login.welcome'),
 	});
 };
 
@@ -30,19 +30,19 @@ export const Register = async (request: FastifyRequest, reply: FastifyReply) => 
 
 	if (await userModel.emailAlreadyExists(email)) {
 		return reply.status(409).send({
-			message: i18n.t('error.email.alreadyExists'),
+			message: request.i18n.t('errors.email.alreadyExists'),
 		});
 	}
 
 	if ((await userModel.usernameAlreadyExists(email))) {
 		return reply.status(409).send({
-			message: i18n.t('error.username.alreadyExists'),
+			message: request.i18n.t('errors.username.alreadyExists'),
 		});
 	}
 
 	if (password !== confirmPassword) {
 		return reply.status(400).send({
-			message: i18n.t('error.password.notMatching'),
+			message: request.i18n.t('errors.password.notMatching'),
 		});
 	}
 
@@ -52,17 +52,21 @@ export const Register = async (request: FastifyRequest, reply: FastifyReply) => 
 	request.session.user = user;
 
 	return reply.send({
-		message: i18n.t('login.welcome'),
+		message: request.i18n.t('login.welcome'),
 	});
 };
 
-export const Logout = async (request: FastifyRequest, reply: FastifyReply) => {
+export const Logout = async (request: FastifyRequest, reply: FastifyReply, msg: boolean = true) => {
 	await request.session.destroy();
-	reply.clearCookie('sessionId');
-	reply.header('Set-Cookie', 'sessionId=; Path=/; HttpOnly; Secure; SameSite=Strict; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
-	return reply.send({
-		message: i18n.t('login.logout'),
-	});
+	if (!reply.sent) {
+		reply.clearCookie('sessionId');
+		reply.header('Set-Cookie', 'sessionId=; Path=/; HttpOnly; Secure; SameSite=Strict; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
+	}
+	if (msg) {
+		return reply.send({
+			message: request.i18n.t('login.logout'),
+		});
+	}
 };
 
 export default {

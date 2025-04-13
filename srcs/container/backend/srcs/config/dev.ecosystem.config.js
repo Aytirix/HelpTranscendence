@@ -11,7 +11,7 @@ module.exports = {
 				usePolling: true,
 			},
 			autorestart: true,
-			restart_delay: 500,
+			restart_delay: 100,
 			log_file: "./logs/api_transcendence.log",
 			out_file: "./logs/api_transcendence_out.log",
 			error_file: "./logs/api_transcendence_error.log",

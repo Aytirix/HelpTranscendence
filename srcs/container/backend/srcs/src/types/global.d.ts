@@ -7,3 +7,9 @@ declare module 'fastify' {
 		user?: User;
 	}
 }
+
+declare module 'fastify' {
+	interface FastifyRequest {
+		i18n: i18next.i18n;
+	}
+}
