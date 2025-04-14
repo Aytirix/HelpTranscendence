@@ -36,6 +36,23 @@ app.register(fastifyWebsocket);
 // Enregistrement des routes
 app.register(userRoutes);
 
+app.get('/ws', { websocket: true }, (connection) => {
+	console.log('Nouvelle connexion WebSocket');
+    connection.socket.on('message', (message) => {
+        try {
+            console.log('Message reçu:', message);
+            connection.socket.send('Message reçu');
+        } catch (error) {
+            console.error('Erreur dans la gestion du message:', error);
+        }
+    });
+
+    connection.socket.on('close', () => {
+        console.log('La connexion WebSocket a été fermée');
+    });
+});
+
+
 app.listen({ port: 7000, host: '0.0.0.0' }, (err, address) => {
 	if (err) {
 		console.error(err);

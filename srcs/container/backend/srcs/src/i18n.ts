@@ -5,7 +5,7 @@ i18next.use(Backend).init({
   fallbackLng: 'fr',
   preload: ['fr', 'en', 'jp'],
   backend: {
-    loadPath: __dirname + '/locales/{{lng}}/translation.json'
+    loadPath: __dirname + '/locales/{{lng}}/translation_backend.json'
   },
   debug: false,
   returnNull: false,
