@@ -8,6 +8,7 @@ npm install
 
 echo "Starting the server... to $NODE_PROJET"
 if [ "$NODE_PROJET" = "production" ]; then
+	rm -rf dist
 	tsc --project tsconfig.json
 	npm run build
 else

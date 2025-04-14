@@ -18,7 +18,12 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+	"paths": {
+		"@i18n": [
+			"../src/i18next/i18next"
+		],
+	}
   },
   "include": ["vite.config.ts"]
 }

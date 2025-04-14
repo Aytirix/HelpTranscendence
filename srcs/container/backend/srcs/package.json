@@ -4,6 +4,7 @@
 	"main": "index.js",
 	"scripts": {
 		"dev": "pm2-runtime start config/dev.ecosystem.config.js",
+		"build": "tsc --project tsconfig.json && tsc-alias",
 		"prod": "pm2-runtime start config/prod.ecosystem.config.js",
 		"stop": "pm2 delete api_transcendence"
 	},
@@ -31,12 +32,13 @@
 		"i18next": "^24.2.3",
 		"i18next-fs-backend": "^2.6.0",
 		"mysql2": "^3.14.0",
-		"pm2": "^6.0.5"
+		"pm2": "^6.0.5",
+		"tsconfig-paths": "^4.2.0"
 	},
 	"devDependencies": {
 		"@types/node": "^22.13.17",
 		"ts-node": "^10.9.2",
-		"tsconfig-paths": "^4.2.0",
+		"tsc-alias": "^1.8.15",
 		"typescript": "^5.8.2"
 	}
 }
