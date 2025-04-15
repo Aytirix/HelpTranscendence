@@ -22,7 +22,7 @@
 		},
 		"lang": {
 			"required": "La langue est requise.",
-			"invalid": "La langue doit être fr, en ou jp."
+			"invalid": "La langue doit être fr, en ou es."
 		}
 	},
 	"login": {

@@ -80,14 +80,6 @@ export const UpdateUser = async (request: FastifyRequest, reply: FastifyReply) =
 
 	const user = request.session.user;
 
-	console.log('=====================');
-	console.log('change user');
-	console.log(`email: ${email} | ${user.email}`);
-	console.log(`username: ${username} | ${user.username}`);
-	console.log(`password: ${password}`);
-	console.log(`confirmPassword: ${confirmPassword}`);
-	console.log(`lang: ${lang} | ${user.lang}`);
-
 	if (email && email !== user.email && await userModel.emailAlreadyExists(email)) {
 		return reply.status(409).send({
 			message: request.i18n.t('errors.email.alreadyExists'),
@@ -110,7 +102,6 @@ export const UpdateUser = async (request: FastifyRequest, reply: FastifyReply) =
 		request.i18n.changeLanguage(lang);
 	}
 
-
 	await userModel.UpdateUser(user.id.toString(), email, username, password, lang);
 	request.session.user = {
 		...user,
@@ -125,10 +116,6 @@ export const UpdateUser = async (request: FastifyRequest, reply: FastifyReply) =
 
 export const Logout = async (request: FastifyRequest, reply: FastifyReply, msg: boolean = true) => {
 	await request.session.destroy();
-	if (!reply.sent) {
-		reply.clearCookie('sessionId');
-		reply.header('Set-Cookie', 'sessionId=; Path=/; HttpOnly; Secure; SameSite=Strict; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
-	}
 	if (msg) {
 		return reply.send({
 			message: request.i18n.t('login.logout'),

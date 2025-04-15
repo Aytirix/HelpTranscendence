@@ -32,4 +32,9 @@ export default async (fastify: FastifyInstance) => {
 		handler: userController.Logout
 	});
 
+	fastify.get('/isAuth', {
+		schema: userSchema.isAuth,
+		handler: Middleware.isAuth,
+	});
+
 };

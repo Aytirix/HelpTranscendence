@@ -3,7 +3,7 @@ import Backend from 'i18next-fs-backend';
 
 i18next.use(Backend).init({
   fallbackLng: 'fr',
-  preload: ['fr', 'en', 'jp'],
+  preload: ['fr', 'en', 'es'],
   backend: {
     loadPath: __dirname + '/locales/{{lng}}/translation_backend.json'
   },

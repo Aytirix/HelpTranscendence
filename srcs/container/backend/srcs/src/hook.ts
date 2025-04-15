@@ -35,7 +35,7 @@ export async function registerHook(app: FastifyInstance) {
 		}
 		lang = lang.split(',')[0].split('-')[0];
 		lang = lang.toLowerCase().trim();
-		if (lang !== 'fr' && lang !== 'en' && lang !== 'jp') {
+		if (lang !== 'fr' && lang !== 'en' && lang !== 'es') {
 			lang = 'fr';
 		}
 		request.i18n = i18n.cloneInstance({ lng: lang, fallbackLng: 'fr' });

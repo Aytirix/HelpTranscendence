@@ -2,7 +2,7 @@ import { messageResponse } from './common';
 
 export const login = {
 	description: "Connexion utilisateur. Tant qu'il a un cookie sessionId coté client, il peut être considéré comme connecté.",
-	tags: ['user'],
+	tags: ['Authentification'],
 	body: {
 		type: 'object',
 		properties: {
@@ -43,7 +43,7 @@ export const login = {
 export const register = {
 	...login,
 	description: 'Inscription utilisateur',
-	tags: ['user'],
+	tags: ['Authentification'],
 	body: {
 		properties: {
 			...login.body.properties,
@@ -51,7 +51,7 @@ export const register = {
 			username: { type: 'string', minLength: 3, maxLength: 15, pattern: '^[a-zA-Z0-9]+$' },
 			confirmPassword: { type: 'string', minLength: 3 },
 			// confirmPassword: { type: 'string', minLength: 8, maxLength: 25, pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,25}$' },
-			lang: { type: 'string', enum: ['fr', 'en', 'jp'] },
+			lang: { type: 'string', enum: ['fr', 'en', 'es'] },
 		},
 		required: [...login.body.required, 'username', 'confirmPassword'],
 		errorMessage: {
@@ -90,7 +90,7 @@ export const update = {
 
 export const logout = {
 	description: 'Déconnexion utilisateur',
-	tags: ['user'],
+	tags: ['Authentification'],
 	response: {
 		200: {
 			description: 'Déconnexion réussie',
@@ -99,9 +99,45 @@ export const logout = {
 	},
 }
 
+
+export const isAuth = {
+	description: 'Vérification de l\'authentification. Appeler depuis le frontend pour savoir si l\'utilisateur est connecté.',
+	tags: ['Authentification'],
+	response: {
+		200: {
+			description: 'Utilisateur authentifié',
+			type: 'object',
+			properties: {
+				isAuthenticated: { type: 'boolean', const: true },
+				user: {
+					type: 'object',
+					properties: {
+						email: { type: 'string', format: 'email' },
+						username: { type: 'string', minLength: 3, maxLength: 15, pattern: '^[a-zA-Z0-9]+$' },
+						lang: { type: 'string', enum: ['fr', 'en', 'es'] },
+						avatar: { type: 'string', format: 'uri' },
+					},
+					required: ['email', 'username', 'lang', 'avatar'],
+				},
+			},
+			required: ['isAuthenticated', 'user'],
+		},
+		401: {
+			description: 'Utilisateur non authentifié',
+			type: 'object',
+			properties: {
+				isAuthenticated: { type: 'boolean', const: false },
+				user: { type: 'null', const: null },
+			},
+			required: ['isAuthenticated', 'user'],
+		},
+	},
+}
+
 export default {
 	login,
 	register,
 	update,
 	logout,
+	isAuth,
 };

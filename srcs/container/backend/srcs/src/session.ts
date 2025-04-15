@@ -1,7 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import fastifySession from '@fastify/session';
 import fastifyCookie from '@fastify/cookie';
-import MySQLStoreFactory from 'express-mysql-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
 import dotenv from 'dotenv';
 
@@ -16,7 +15,8 @@ export async function registerSession(app: FastifyInstance) {
 			secure: true,
 			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
 			httpOnly: true,
-			sameSite: 'lax',
+			sameSite: 'none',
+			path: '/',
 		},
 		store: new SQLiteStore({
 			db: 'sessions.sqlite',

@@ -26,18 +26,11 @@ export async function setupSwagger(app: FastifyInstance) {
 							type: 'apiKey',
 							description: 'Passez le token d\'authentification dans l\'en-tête de la requête',
 						},
-						language: {
-							name: 'Accept-Language',
-							in: 'header',
-							type: 'apiKey',
-							description: 'Passez la langue dans le cookie de la requête fr, en, jp.',
-						},
 					},
 				},
 				security: [
 					{
 						apiKeyAuth: [],
-						language: [],
 					},
 				],
 			},

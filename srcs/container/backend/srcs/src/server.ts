@@ -3,6 +3,7 @@
 import * as dotenv from 'dotenv';
 import fastify from 'fastify';
 import fastifyWebsocket from '@fastify/websocket';
+import fastifyCors from '@fastify/cors';
 import { registerHook } from './hook';
 import { registerSession } from './session';
 import { registerRateLimit, registerHelmet } from './Middleware';
@@ -32,27 +33,34 @@ registerHook(app);
 registerRateLimit(app);
 registerHelmet(app);
 app.register(fastifyWebsocket);
+app.register(fastifyCors, {
+	origin: 'https://localhost:3000',
+	credentials: true
+});
 
 // Enregistrement des routes
 app.register(userRoutes);
 
 app.get('/ws', { websocket: true }, (connection) => {
 	console.log('Nouvelle connexion WebSocket');
-    connection.socket.on('message', (message) => {
-        try {
-            console.log('Message reçu:', message);
-            connection.socket.send('Message reçu');
-        } catch (error) {
-            console.error('Erreur dans la gestion du message:', error);
-        }
-    });
+	connection.socket.on('message', (message) => {
+		try {
+			console.log('Message reçu:', message);
+			connection.socket.send('Message reçu');
+		} catch (error) {
+			console.error('Erreur dans la gestion du message:', error);
+		}
+	});
 
-    connection.socket.on('close', () => {
-        console.log('La connexion WebSocket a été fermée');
-    });
+	connection.socket.on('close', () => {
+		console.log('La connexion WebSocket a été fermée');
+	});
 });
 
-
+app.get('*', (req, res) => {
+	res.status(404).send('{ "success": false, "message": "The endpoint you are looking for might have been removed, had its name changed, or is temporarily unavailable." }');
+});
+``
 app.listen({ port: 7000, host: '0.0.0.0' }, (err, address) => {
 	if (err) {
 		console.error(err);
