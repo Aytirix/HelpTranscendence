@@ -19,14 +19,14 @@ const WebSocketTest = () => {
 			setMessage(`Message received: ${event.data}`);
 		};
 
-		socket.onclose = () => {
-			console.log('WebSocket closed');
+		socket.onclose = (event) => {
+			console.log('Connexion WebSocket fermée. Code:', event.code, 'Raison:', event.reason);
 			setStatus('WebSocket closed.');
 		};
 
 		socket.onerror = (error) => {
-			console.error('WebSocket error:', error);
 			setStatus('WebSocket error!');
+			console.error('WebSocket error:', error);
 		};
 
 		return () => {

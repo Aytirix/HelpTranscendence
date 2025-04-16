@@ -48,11 +48,16 @@ app.get('*', (req, res) => {
 	res.status(404).send('{ "success": false, "message": "The endpoint you are looking for might have been removed, had its name changed, or is temporarily unavailable." }');
 });
 
-app.listen({ port: 7000, host: '0.0.0.0' }, (err, address) => {
-	if (err) {
-		console.error(err);
-		process.exit(1);
-	}
-	console.clear();
-	console.log(`Server listening at ${address}`);
-});
+try {
+	app.listen({ port: 7000, host: '0.0.0.0' }, (err, address) => {
+		if (err) {
+			console.error(err);
+			process.exit(1);
+		}
+		console.clear();
+		console.log(`Server listening at ${address}`);
+	});
+} catch (err) {
+	console.error('Error starting server:', err);
+	process.exit(1);
+}

@@ -17,7 +17,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-i18next": "^15.4.1",
-    "react-router-dom": "^7.5.0"
+    "react-router-dom": "^7.5.0",
+    "websocket-ts": "^2.2.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

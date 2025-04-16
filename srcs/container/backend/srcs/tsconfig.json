@@ -17,6 +17,7 @@
 			"@schemas/*": ["./src/schemas/*"],
 			"@models/*": ["./src/models/*"],
 			"@controllers/*": ["./src/controllers/*"],
+			"@session": ["./src/session"],
 		  }
 	},
 	"include": ["src/**/*"],

@@ -6,6 +6,21 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+let store: any = null;
+
+export async function getStore() {
+	if (!store) {
+		const SQLiteStore = SQLiteStoreFactory(fastifySession as any);
+		store = new SQLiteStore({
+			db: 'sessions.sqlite',
+			dir: './sqlite',
+			concurrentDB: true,
+			table: 'sessions',
+		});
+	}
+	return store;
+}
+
 export async function registerSession(app: FastifyInstance) {
 	const SQLiteStore = SQLiteStoreFactory(fastifySession as any);
 	app.register(fastifyCookie);
@@ -18,11 +33,11 @@ export async function registerSession(app: FastifyInstance) {
 			sameSite: 'none',
 			path: '/',
 		},
-		store: new SQLiteStore({
-			db: 'sessions.sqlite',
-			dir: './sqlite',
-			concurrentDB: true,
-			table: 'sessions',
-		}),
+		store: await getStore(),
 	});
+}
+
+export default {
+	getStore,
+	registerSession,
 }

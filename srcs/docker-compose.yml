@@ -35,8 +35,6 @@ services:
     volumes:
       - backend_data:${BACKEND_PATH}
     working_dir: ${BACKEND_PATH}
-    ports:
-      - "7000"
     restart: always
     networks:
       - iron_network
@@ -51,8 +49,6 @@ services:
     volumes:
       - frontend_data:${FRONTEND_PATH}
     working_dir: ${FRONTEND_PATH}
-    ports:
-      - "3000"
     restart: on-failure
     networks:
       - iron_network

@@ -1,59 +1,70 @@
-import { Server as WebSocketServer } from 'ws';
-import { IncomingMessage } from 'http';
+import { parse } from 'cookie';
+import SQLiteStoreFactory from 'connect-sqlite3';
 import { Socket } from 'net';
-import fastify from 'fastify';
+import { IncomingMessage } from 'http';
+import { Server as WebSocketServer } from 'ws';
+import { FastifyInstance } from 'fastify';
+import fastifyCookie from '@fastify/cookie';
+import Middleware from '@Middleware';
 
 let wss: WebSocketServer | null = null;
 
-function initWebSocket(server: any): void {
-	console.log('Initialisation de WebSocket...');
+async function initWebSocket(server: FastifyInstance) {
+    console.log('Initialisation de WebSocket...');
 
-	// Vérification si le serveur WebSocket est déjà initialisé
-	if (wss) {
-		console.log('WebSocketServer déjà initialisé, aucune action effectuée.');
-		return;
-	}
+    if (wss) {
+        console.log('WebSocketServer déjà initialisé, aucune action effectuée.');
+        return;
+    }
 
-	// Initialisation de WebSocketServer avec la configuration
-	wss = new WebSocketServer({ noServer: true, perMessageDeflate: false, clientTracking: true });
+    // Initialisation de WebSocketServer avec la configuration
+    wss = new WebSocketServer({ noServer: true, perMessageDeflate: false, clientTracking: true });
 
-	// Gérer les connexions WebSocket
-	wss.on('connection', (ws, req: IncomingMessage) => {
-		const path = req.url;
+    // Gérer les connexions WebSocket
+    wss.on('connection', (ws, req: IncomingMessage) => {
+        const path = req.url;
+        console.log(`Nouvelle connexion WebSocket sur ${path}`);
 
-		console.log(`Nouvelle connexion WebSocket sur ${path}`);
+        ws.on('message', (message: string) => {
+            console.log('Message reçu:', message);
+            ws.send(`Message reçu: ${message}`);
+        });
 
-		// Réception des messages du client
-		ws.on('message', (message: string) => {
-			console.log('Message reçu:', message);
-			// Réponse au client
-			ws.send(`Message reçu: ${message}`);
-		});
+        ws.on('close', () => {
+            console.log('La connexion WebSocket a été fermée');
+        });
 
-		// Gestion de la fermeture de la connexion
-		ws.on('close', () => {
-			console.log('La connexion WebSocket a été fermée');
-		});
+        ws.on('error', (error: Error) => {
+            console.error('Erreur WebSocket:', error);
+        });
+    });
 
-		// Gestion des erreurs WebSocket
-		ws.on('error', (error: Error) => {
-			console.error('Erreur WebSocket:', error);
-		});
-	});
+    // Intégration avec Fastify pour gérer les requêtes WebSocket
+    server.server.on('upgrade', async (request: IncomingMessage, socket: Socket, head: Buffer) => {
+        try {
+            // Récupérer la session dans le store SQLite
+			const session = await Middleware.parseSession(request);
 
-	// Intégration avec Fastify pour gérer les requêtes WebSocket
-	server.server.on('upgrade', (request, socket, head) => {
-		console.log('Requête d\'upgrade WebSocket reçue');
-		// Vérification de la requête d'upgrade vers WebSocket
-		if (request.url === '/ws') {
-			// On monte la connexion WebSocket
-			wss?.handleUpgrade(request, socket as Socket, head, (ws) => {
-				wss?.emit('connection', ws, request);
-			});
-		} else {
-			// Si ce n'est pas pour le WebSocket, on passe à la suite
-		}
-	});
+			if (!session || !session.user) {
+				socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+				socket.destroy();
+				return;
+			}
+			
+            // Si la session est valide, on peut accepter la connexion WebSocket
+            if (request.url === '/ws') {
+                wss?.handleUpgrade(request, socket, head, (ws: WebSocket) => {
+                    // Attacher l'utilisateur à la connexion WebSocket
+                    (ws as any).user = session.user;
+                    wss?.emit('connection', ws, request);
+                });
+            }
+        } catch (err) {
+			console.error('Erreur lors de la gestion de la connexion WebSocket:', err);
+            socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
+            socket.destroy();
+        }
+    });
 }
 
 export { initWebSocket };
