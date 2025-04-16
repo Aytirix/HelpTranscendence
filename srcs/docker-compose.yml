@@ -57,53 +57,6 @@ services:
     networks:
       - iron_network
 
-  # mariadb:
-  #   build:
-  #     context: container/mariadb
-  #     dockerfile: Dockerfile
-  #   container_name: mariadb
-  #   volumes:
-  #     - sqlite_data:/var/lib/mysql
-  #   ports:
-  #     - "3306"
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-  #     MYSQL_USER: ${MYSQL_USER}
-  #     MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-  #     MYSQL_DATABASE: ${MYSQL_DATABASE}
-  #   restart: always
-  #   networks:
-  #     - iron_network
-
-  # phpmyadmin:
-  #   image: phpmyadmin
-  #   container_name: phpmyadmin
-  #   depends_on:
-  #     - mariadb
-  #   ports:
-  #     - "8080:80"
-  #   environment:
-  #     PMA_HOST: mariadb
-  #     PMA_USER: ${MYSQL_USER}
-  #     PMA_PASSWORD: ${MYSQL_PASSWORD}
-  #     PMA_PORT: 3306
-  #   restart: always
-  #   networks:
-  #     - iron_network
-
-  # sqlitebrowser:
-  #   image: linuxserver/sqlitebrowser
-  #   container_name: sqlitebrowser
-  #   volumes:
-  #     - sqlite_data:/var/lib/sqlite
-  #   ports:
-  #     - "127.0.0.1:3001:3001"
-  #   depends_on:
-  #     - backend
-  #   restart: always
-  #   networks:
-  #   - iron_network
-
 volumes:
   shared:
     driver: local

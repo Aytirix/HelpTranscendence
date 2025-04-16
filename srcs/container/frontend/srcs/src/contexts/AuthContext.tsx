@@ -35,17 +35,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 				if (isMounted) {
 					setUser({ isAuthenticated: res.isAuthenticated });
 
-					// if (!res.isAuthenticated && window.location.pathname !== "/login") {
-					// 	navigate('/login');
-					// }
+					if (!res.isAuthenticated && window.location.pathname !== "/login") {
+						navigate('/login');
+					}
 				}
 			} catch (err) {
 				console.error("Auth check failed:", err);
 				if (isMounted) {
 					setUser({ isAuthenticated: false });
-					// if (window.location.pathname !== "/login") {
-					// 	navigate('/login');
-					// }
 				}
 			} finally {
 				if (isMounted) setLoading(false);
