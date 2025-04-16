@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 
 const WebSocketTest = () => {
 	const [status, setStatus] = useState('Connecting to WebSocket...');
-	const [message, setMessage] = useState('');
+	const [messages, setMessages] = useState<string[]>([]);
+	const [input, setInput] = useState('');
 	const [ws, setWs] = useState<WebSocket | null>(null);
 
 	useEffect(() => {
-		const socket = new WebSocket('wss://localhost:7000/ws');
+		const socket = new WebSocket('wss://localhost:7000/ws/chat');
 		setWs(socket);
 
 		socket.onopen = () => {
@@ -16,7 +17,7 @@ const WebSocketTest = () => {
 
 		socket.onmessage = (event) => {
 			console.log('Message received:', event.data);
-			setMessage(`Message received: ${event.data}`);
+			setMessages(prev => [...prev, `Server: ${event.data}`]);
 		};
 
 		socket.onclose = (event) => {
@@ -36,22 +37,38 @@ const WebSocketTest = () => {
 
 	const sendMessage = () => {
 		if (ws && ws.readyState === WebSocket.OPEN) {
-			ws.send('Hello from client!');
-			console.log('Message sent');
+			ws.send(input);
+			setMessages(prev => [...prev, `You: ${input}`]);
+			setInput('');
 		} else {
-			console.log('WebSocket not connected');
+			console.error('WebSocket is not open. Message not sent.');
 		}
 	};
 
 	return (
-		<div>
+		<div style={{ padding: '1rem' }}>
 			<h1>WebSocket Test Page</h1>
-			<p>{status}</p>
-			<div>
-				<button onClick={sendMessage}>Send Message</button>
+			<p>Status: {status}</p>
+
+			<div style={{ marginBottom: '1rem' }}>
+				<input
+					type="text"
+					value={input}
+					onChange={(e) => setInput(e.target.value)}
+					placeholder="Type your message..."
+					style={{ marginRight: '0.5rem' }}
+				/>
+				<button onClick={sendMessage}>Send</button>
 			</div>
-			<div>
-				<p>{message}</p>
+
+			<div style={{ border: '1px solid #ccc', padding: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
+				<h3>Message Log:</h3>
+				{messages.length === 0 && <p>No messages yet.</p>}
+				<ul>
+					{messages.map((msg, index) => (
+						<li key={index}>{msg}</li>
+					))}
+				</ul>
 			</div>
 		</div>
 	);

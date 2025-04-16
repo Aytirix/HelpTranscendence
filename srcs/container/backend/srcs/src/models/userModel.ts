@@ -3,17 +3,6 @@ import executeReq from '@models/database';
 import { User } from '@types';
 import tools from '@tools';
 
-export const getUsers = async (): Promise<User[]> => {
-	const result = await executeReq('SELECT * FROM users');
-	return (result as any[]).map((user: User) => ({
-		id: user.id,
-		username: user.username,
-		email: user.email,
-		avatar: user.avatar,
-		lang: user.lang,
-	}));
-};
-
 export const Login = async (email: string, password: string): Promise<User | null> => {
 	const result = await executeReq('SELECT * FROM users WHERE email = ? OR username = ? LIMIT 1', [email, email]) as User[];
 	if (result.length === 0) {
@@ -41,6 +30,9 @@ export const Register = async (email: string, username: string, password: string
 		'INSERT INTO users (email, username, password, lang) VALUES (?, ?, ?, ?)',
 		[email, username, hashedPassword, lang],
 	);
+	if (result.affectedRows === 0) {
+		throw new Error('Failed to register user');
+	}
 	return {
 		id: result.insertId,
 		username,

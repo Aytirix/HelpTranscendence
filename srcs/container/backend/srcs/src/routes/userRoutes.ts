@@ -4,11 +4,6 @@ import userSchema from '@schemas/userSchema';
 import Middleware from '@Middleware';
 
 export default async (fastify: FastifyInstance) => {
-	fastify.get('/', {
-		preHandler: [Middleware.isAuthenticated],
-		handler: userController.getAllUsers
-	});
-
 	fastify.post('/login', {
 		preHandler: [Middleware.isNotAuthenticated],
 		schema: userSchema.login,

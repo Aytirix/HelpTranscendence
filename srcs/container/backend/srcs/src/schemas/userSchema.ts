@@ -117,7 +117,6 @@ export const isAuth = {
 						lang: { type: 'string', enum: ['fr', 'en', 'es'] },
 						avatar: { type: 'string', format: 'uri' },
 					},
-					required: ['email', 'username', 'lang', 'avatar'],
 				},
 			},
 			required: ['isAuthenticated', 'user'],

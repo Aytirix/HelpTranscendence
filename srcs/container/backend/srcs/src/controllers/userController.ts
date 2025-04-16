@@ -1,12 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import userModel from '@models/userModel';
 import i18n from '@i18n';
-import { Query } from 'mysql2/typings/mysql/lib/protocol/sequences/Query';
-
-export const getAllUsers = async (req: FastifyRequest, reply: FastifyReply) => {
-
-	return reply.send(req.session.user);
-};
 
 export const Login = async (request: FastifyRequest, reply: FastifyReply) => {
 	const { email, password } = request.body as { email: string; password: string };
@@ -49,7 +43,7 @@ export const Register = async (request: FastifyRequest, reply: FastifyReply) => 
 
 	const user = await userModel.Register(email, username, password, lang);
 
-	i18n.changeLanguage(lang);
+	request.i18n.changeLanguage(lang);
 	request.session.user = user;
 
 	return reply.send({
@@ -124,7 +118,6 @@ export const Logout = async (request: FastifyRequest, reply: FastifyReply, msg: 
 };
 
 export default {
-	getAllUsers,
 	Login,
 	Register,
 	UpdateUser,

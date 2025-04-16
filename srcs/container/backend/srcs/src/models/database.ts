@@ -77,7 +77,7 @@ async function closeDbConnection(db: Connection | null) {
  * @remarks
  * Cette fonction établit une connexion à la base de données, exécute la requête SQL, puis ferme la connexion, même en cas d'erreur.
  */
-async function executeReq(req: string, data: Array<string> = []) {
+async function executeReq(req: string, data: Array<string | number> = []) {
 	let db = null;
 	return new Promise(async (resolve, reject) => {
 		try {

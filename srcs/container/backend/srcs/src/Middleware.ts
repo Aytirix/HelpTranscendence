@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { FastifyInstance, FastifyReply, FastifyRequest, Session } from 'fastify';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyHelmet from '@fastify/helmet';
 import { User } from '@types';
@@ -7,7 +7,7 @@ import { parse } from 'cookie';
 import { getStore } from '@session';
 
 async function isNotAuthenticated(request: FastifyRequest, reply: FastifyReply) {
-	if (request.session.user !== undefined) {
+	if (request && request.session && request.session.user !== undefined) {
 		return reply.status(403).send({
 			message: request.i18n.t('login.alreadyLoggedIn'),
 		});
@@ -15,7 +15,7 @@ async function isNotAuthenticated(request: FastifyRequest, reply: FastifyReply) 
 }
 
 export async function isAuthenticated(request: FastifyRequest, reply: FastifyReply) {
-	if (request.session.user === undefined) {
+	if (!request || !request.session || request.session.user === undefined) {
 		return reply.status(401).send({
 			message: request.i18n.t('login.notLoggedIn'),
 		});
@@ -24,14 +24,14 @@ export async function isAuthenticated(request: FastifyRequest, reply: FastifyRep
 
 export async function isAuth(request: FastifyRequest, reply: FastifyReply) {
 	const user = request.session.user as User;
-	if (request.session.user !== undefined) {
+	if (request && request.session && request.session.user !== undefined) {
 		return reply.status(200).send({
 			isAuthenticated: true,
 			user: {
 				email: user.email,
 				username: user.username,
 				lang: user.lang,
-				avatar: user.avatar,
+				avatar: user.avatar || null,
 			},
 		});
 	}
@@ -70,22 +70,26 @@ export async function registerHelmet(app: FastifyInstance) {
 	});
 }
 
-export async function parseSession(request: IncomingMessage): Promise<any> {
-	const cookies = parse(request.headers.cookie || '');
-	const rawSessionId = cookies['sessionId'];
+export async function getSessionByCookie(request: IncomingMessage): Promise<Session | null> {
+	try {
+		const cookies = parse(request.headers.cookie || '');
+		const rawSessionId = cookies['sessionId'];
 
-	if (!rawSessionId) return null;
+		if (!rawSessionId) return null;
+		const sid = rawSessionId.split('.')[0];
 
-	const sid = rawSessionId.split('.')[0];
+		const store = await getStore();
 
-	const store = await getStore();
-
-	return new Promise((resolve, reject) => {
-		store.get(sid, (err: any, session: any) => {
-			if (err) return reject(err);
-			resolve(session);
+		return new Promise((resolve, reject) => {
+			store.get(sid, (err: any, session: Session) => {
+				if (err) return reject(err);
+				resolve(session);
+			});
 		});
-	});
+	} catch (err) {
+		console.error('Error fetching session:', err);
+		return null;
+	}
 }
 
 export default {
@@ -94,5 +98,5 @@ export default {
 	isAuth,
 	registerRateLimit,
 	registerHelmet,
-	parseSession,
+	getSessionByCookie,
 };
