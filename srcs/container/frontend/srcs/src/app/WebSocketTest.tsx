@@ -26,7 +26,7 @@ interface Group {
 const WebSocketChat = () => {
   const [status, setStatus] = useState('Connecting...');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [usersConnected, setUsersConnected] = useState<User[]>([]);
+  const [friends_connected, setfriends_connected] = useState<User[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [activeGroupId, setActiveGroupId] = useState<number | null>(null);
   const [input, setInput] = useState('');
@@ -71,7 +71,7 @@ const WebSocketChat = () => {
           case 'connected':
             setCurrentUser(data.user);
             currentUserIdRef.current = data.user.id;
-            setUsersConnected(data.users_connected);
+            setfriends_connected(data.friends_connected);
             setGroups(data.groups);
             if (data.groups.length > 0) setActiveGroupId(data.groups[0].id);
             break;
@@ -194,7 +194,7 @@ const WebSocketChat = () => {
 
       <aside className="w-48 bg-white border-l border-gray-200 p-4 overflow-y-auto">
         <h2 className="text-xl font-semibold mb-4">Online</h2>
-        {usersConnected.length ? usersConnected.map(u => (
+        {friends_connected.length ? friends_connected.map(u => (
           <div key={u.id} className="py-1 text-gray-800">{u.username}</div>
         )) : <p className="text-gray-500">No one online</p>}
       </aside>

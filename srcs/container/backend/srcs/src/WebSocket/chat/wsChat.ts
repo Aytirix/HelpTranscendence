@@ -1,14 +1,14 @@
-import { Group, User } from '@types';
+import { skGroup, User } from '@types';
 import { State, reponse, req_newMessage } from '@typesChat';
 import { IncomingMessage } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
-import modelsChat from '@models/chat';
-import modelsFriends from '@models/friends';
-import controllersChat from '@controllers/chat';
+import modelsChat from '@models/modelChat';
+import modelsFriends from '@models/modelFriends';
+import controllersChat from '@controllers/controllerChat';
 
-let state: State = {
-	groups: [] as Group[],
-	users_connected: [] as User[],
+const state: State = {
+	groups: [] as skGroup[],
+	users_connected: [] as WebSocket[],
 }
 
 async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, req: IncomingMessage): Promise<void> {
@@ -43,16 +43,29 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, req: IncomingM
 		}
 		ws.send(JSON.stringify({
 			action: 'state',
-			groups: state.groups,
-			users_connected: state.users_connected,
+			groups: state.groups.map(group => ({
+				id: group.id,
+				name: group.name,
+				members: group.members.map(userws => userws.user),
+				messages: group.messages,
+			})),
+			users_connected: state.users_connected.map(userws => userws.user),
 		}));
 	});
 
 	ws.on('close', () => {
 		console.log('Déconnexion de l\'utilisateur:', ws.user?.id);
-		state.users_connected = state.users_connected.filter(user => user.id !== (ws as any).user?.id);
+		state.users_connected = state.users_connected.filter(userws => userws.user.id !== ws.user?.id);
 		state.groups = state.groups.map(group => {
-			group.members = group.members.filter(user => ws.user.id !== (ws as any).user?.id);
+			group.members = group.members.filter(userws => userws.user.id !== ws.user?.id);
+			group.members.forEach(member => {
+				if (member.readyState === WebSocket.OPEN) {
+					member.send(JSON.stringify({
+						action: 'user_disconnected',
+						user: ws.user.id
+					}));
+				}
+			});
 			return group;
 		}
 		);

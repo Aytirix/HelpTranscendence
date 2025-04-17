@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import userController from '@controllers/userController';
+import userController from '@controllers/controllerUser';
 import userSchema from '@schemas/userSchema';
 import Middleware from '@Middleware';
 

@@ -18,12 +18,20 @@ export interface Message {
 	sent_at: Date;
 }
 
-export interface Group {
+export interface skGroup {
 	id: number;
 	name: string;
 	members: WebSocket[];
 	messages: Message[];
 }
+
+export interface Group {
+	id: number;
+	name: string;
+	members: User[];
+	messages: Message[];
+}
+
 
 export interface Friends {
 	id: number;

@@ -6,7 +6,7 @@ import { Server as WebSocketServer, WebSocket } from 'ws';
 import { FastifyInstance } from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import Middleware from '@Middleware';
-import chatWebSocket from './chat/chat';
+import chatWebSocket from './chat/wsChat';
 
 let wss: WebSocketServer | null = null;
 

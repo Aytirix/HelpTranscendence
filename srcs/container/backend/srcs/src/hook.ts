@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { Logout } from '@controllers/userController';
+import { Logout } from '@controllers/controllerUser';
 import i18n from './i18n';
 
 export async function registerHook(app: FastifyInstance) {

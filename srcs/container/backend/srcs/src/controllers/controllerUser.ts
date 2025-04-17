@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import userModel from '@models/userModel';
+import userModel from '@models/modelUser';
 import i18n from '@i18n';
 
 export const Login = async (request: FastifyRequest, reply: FastifyReply) => {

@@ -6,7 +6,7 @@ import { registerHook } from './hook';
 import { registerSession } from './session';
 import { registerRateLimit, registerHelmet } from './Middleware';
 import { setupSwagger } from './docs';
-import { initWebSocket } from './WebSocket/initWebSocket';  // Import de la fonction WebSocket
+import { initWebSocket } from './WebSocket/wsInit';  // Import de la fonction WebSocket
 import userRoutes from './routes/userRoutes';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';

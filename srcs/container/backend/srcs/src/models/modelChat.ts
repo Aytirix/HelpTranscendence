@@ -1,8 +1,9 @@
-import { Group, Message, User } from '@types';
+import { skGroup, Message, User } from '@types';
 import executeReq from '@models/database';
 import { WebSocketServer, WebSocket } from 'ws';
+import { State } from '@typesChat';
 
-async function getAllGroupsFromUser(userws: WebSocket, list_groups: Group[]) {
+async function getAllGroupsFromUser(userws: WebSocket, state: State) {
 	const query = `SELECT * FROM groups WHERE id IN (SELECT group_id FROM group_users WHERE user_id = ?)`;
 	const groups: any = await executeReq(query, [userws.user.id]);
 	if (groups.length === 0) {
@@ -10,7 +11,10 @@ async function getAllGroupsFromUser(userws: WebSocket, list_groups: Group[]) {
 	}
 
 	await Promise.all(groups.map(async (group: any) => {
-		if (!list_groups.some(g => g.id === group.id)) {
+		const existingGroup = state.groups.find(g => g.id === group.id);
+		if (existingGroup) {
+			existingGroup.members.push(userws);
+		} else {
 			let grp = {
 				id: group.id,
 				name: group.name,
@@ -18,41 +22,33 @@ async function getAllGroupsFromUser(userws: WebSocket, list_groups: Group[]) {
 				messages: []
 			};
 			grp.messages = await getMessagesFromGroup(grp, 20);
-			list_groups.push(grp);
-		} else {
-			const existingGroup = list_groups.find(g => g.id === group.id);
-			if (existingGroup) {
-				existingGroup.members.push(userws);
-			}
+			console.log('Messages qqty:', grp.messages.length);
+			state.groups.push(grp);
 		}
 	}));
-
-	return list_groups;
 }
 
 
-async function getMessagesFromGroup(group: Group, limit: number) {
+async function getMessagesFromGroup(group: skGroup, limit: number) {
 	const id_first_message = group.messages.length > 0 ? group.messages[0].id : 0;
 	const query = `SELECT * FROM group_messages WHERE group_id = ? AND id > ? ORDER BY id DESC LIMIT ?`;
 	const messages: any = await executeReq(query, [group.id, id_first_message, limit]);
 	if (messages.length === 0) {
 		return [];
 	}
+	console.log('Messages qqty:', messages.length);
 	messages.map((message: any) => {
-		const userws = group.members.find((userws: WebSocket) => userws.user.id === message.sender_id);
-		if (userws) {
-			group.messages.push({
-				id: message.id,
-				sender_id: userws.user.id,
-				message: message.message,
-				sent_at: message.sent_at,
-			});
-		}
+		group.messages.push({
+			id: message.id,
+			sender_id: message.sender_id,
+			message: message.message,
+			sent_at: message.sent_at,
+		});
 	});
 	return group.messages;
 }
 
-async function newMessage(group: Group, user: User, message: string) {
+async function newMessage(group: skGroup, user: User, message: string) {
 	const query = `INSERT group_messages (group_id, sender_id, message) VALUES (?, ?, ?)`;
 	const result: any = await executeReq(query, [group.id, user.id, message]);
 
