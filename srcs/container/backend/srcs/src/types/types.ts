@@ -1,11 +1,14 @@
+import { WebSocket } from 'ws';
+
 export interface User {
 	id: number;
 	email: string;
 	username: string;
 	password?: string;
+	lang: string;
+	friends?: Friends[];
 	google_token?: string;
 	avatar?: string;
-	lang: string;
 }
 
 export interface Message {
@@ -16,8 +19,15 @@ export interface Message {
 }
 
 export interface Group {
-	group_id: number;
+	id: number;
 	name: string;
-	members: User[];
+	members: WebSocket[];
 	messages: Message[];
+}
+
+export interface Friends {
+	id: number;
+	friend_id: number;
+	target: string;
+	status: string;
 }

@@ -1,7 +1,7 @@
 import fastify from 'fastify';
 import { SessionData } from '@fastify/session';
 import { User } from '@types';
-import { Server as WebSocketServer, WebSocket } from 'ws';
+import { WebSocket } from 'ws';
 
 declare module 'fastify' {
 	interface Session {

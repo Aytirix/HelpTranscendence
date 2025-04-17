@@ -13,7 +13,7 @@
 			"@i18n": ["./src/i18n"],
 			"@tools": ["./src/tools"],
 			"@Middleware": ["./src/Middleware"],
-			"@types": ["./src/types/types"],
+			"@*": ["./src/types/*"],
 			"@schemas/*": ["./src/schemas/*"],
 			"@models/*": ["./src/models/*"],
 			"@controllers/*": ["./src/controllers/*"],

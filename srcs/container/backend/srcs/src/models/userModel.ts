@@ -88,7 +88,6 @@ export const UpdateUser = async (id: string, email: string = null, username: str
 };
 
 export default {
-	getUsers,
 	Login,
 	Register,
 	emailAlreadyExists,

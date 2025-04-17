@@ -17,9 +17,9 @@ async function initWebSocket(server: FastifyInstance) {
 
 	wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
 		const path = req.url;
-		console.log(`[WebSocket] Connexion établie pour l'utilisateur: ${req.url}`);
+
 		switch (path) {
-			case '/ws/chat':
+			case '/chat':
 				chatWebSocket(wss, ws, req);
 				break;
 			default:
@@ -43,7 +43,6 @@ async function initWebSocket(server: FastifyInstance) {
 
 			wss?.handleUpgrade(request, socket, head, (ws: WebSocket) => {
 				ws.user = session.user;
-				console.log(`[WebSocket] Connexion établiee`);
 				wss?.emit('connection', ws, request);
 			});
 		} catch (err) {

@@ -16,16 +16,15 @@ const app = fastify({ trustProxy: true });
 
 (async () => { await setupSwagger(app); })();
 
-// Ajout de la gestion des erreurs Ajv
 const ajv = new Ajv({
 	allErrors: true,
 	useDefaults: true,
 	strict: false,
 });
+
 addFormats(ajv);
 ajvErrors(ajv);
 app.setValidatorCompiler(({ schema }) => { return ajv.compile(schema); });
-
 // Middleware de sécurité
 (async () => {
 	await registerSession(app);
@@ -41,8 +40,6 @@ app.register(fastifyCors, {
 
 // Enregistrement des routes
 app.register(userRoutes);
-
-// route websocket
 
 // Intégration de WebSocket
 initWebSocket(app);  // Appel de la fonction initWebSocket

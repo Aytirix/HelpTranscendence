@@ -21,8 +21,6 @@
 		"@fastify/session": "^11.1.0",
 		"@fastify/swagger": "^9.4.2",
 		"@fastify/swagger-ui": "^5.2.2",
-		"@fastify/websocket": "^11.0.2",
-		"@types/i18next-fs-backend": "^1.1.5",
 		"ajv-errors": "^3.0.0",
 		"bcrypt": "^5.1.1",
 		"better-sqlite3": "^9.2.0",
@@ -34,10 +32,12 @@
 		"i18next-fs-backend": "^2.6.0",
 		"mysql2": "^3.14.0",
 		"pm2": "^6.0.5",
-		"tsconfig-paths": "^4.2.0"
+		"tsconfig-paths": "^4.2.0",
+		"ws": "^8.18.1"
 	},
 	"devDependencies": {
 		"@types/node": "^22.13.17",
+		"@types/ws": "^8.18.1",
 		"ts-node": "^10.9.2",
 		"tsc-alias": "^1.8.15",
 		"typescript": "^5.8.2"

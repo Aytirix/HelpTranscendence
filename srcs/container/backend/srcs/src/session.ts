@@ -48,7 +48,6 @@ class CustomSQLiteStore {
 	}
 
 	get(sid: string, callback: (err: any, session?: Session) => void) {
-		console.log('get session', sid);
 		this.db.get(
 			`SELECT sess FROM sessions WHERE sid = ?`,
 			[sid],
@@ -67,7 +66,6 @@ class CustomSQLiteStore {
 	}
 
 	destroy(sid: string, callback: (err: any) => void) {
-		console.log('get session', sid);
 		this.db.run(
 			`DELETE FROM sessions WHERE sid = ?`,
 			[sid],

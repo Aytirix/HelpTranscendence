@@ -23,10 +23,10 @@ export async function isAuthenticated(request: FastifyRequest, reply: FastifyRep
 }
 
 export async function isAuth(request: FastifyRequest, reply: FastifyReply) {
-	const user = request.session.user as User;
 	if (request && request.session && request.session.user !== undefined) {
+		const user = request.session.user as User;
 		return reply.status(200).send({
-			isAuthenticated: true,
+			isAuthenticated: false,
 			user: {
 				email: user.email,
 				username: user.username,
@@ -34,11 +34,12 @@ export async function isAuth(request: FastifyRequest, reply: FastifyReply) {
 				avatar: user.avatar || null,
 			},
 		});
+	} else {
+		return reply.status(401).send({
+			isAuthenticated: false,
+			user: null,
+		});
 	}
-	return reply.status(200).send({
-		isAuthenticated: false,
-		user: null,
-	});
 }
 
 export async function registerRateLimit(app: FastifyInstance) {
