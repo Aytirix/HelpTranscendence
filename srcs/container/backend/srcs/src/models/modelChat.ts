@@ -21,22 +21,19 @@ async function getAllGroupsFromUser(userws: WebSocket, state: State) {
 				members: [userws],
 				messages: []
 			};
-			grp.messages = await getMessagesFromGroup(grp, 20);
-			console.log('Messages qqty:', grp.messages.length);
+			grp.messages = await getMessagesFromGroup(grp);
 			state.groups.push(grp);
 		}
 	}));
 }
 
-
-async function getMessagesFromGroup(group: skGroup, limit: number) {
+async function getMessagesFromGroup(group: skGroup, limit: number = 20) {
 	const id_first_message = group.messages.length > 0 ? group.messages[0].id : 0;
-	const query = `SELECT * FROM group_messages WHERE group_id = ? AND id > ? ORDER BY id DESC LIMIT ?`;
+	const query = `SELECT * FROM group_messages WHERE group_id = ? AND id > ? ORDER BY sent_at DESC LIMIT ?`;
 	const messages: any = await executeReq(query, [group.id, id_first_message, limit]);
 	if (messages.length === 0) {
 		return [];
 	}
-	console.log('Messages qqty:', messages.length);
 	messages.map((message: any) => {
 		group.messages.push({
 			id: message.id,
@@ -49,8 +46,10 @@ async function getMessagesFromGroup(group: skGroup, limit: number) {
 }
 
 async function newMessage(group: skGroup, user: User, message: string) {
-	const query = `INSERT group_messages (group_id, sender_id, message) VALUES (?, ?, ?)`;
-	const result: any = await executeReq(query, [group.id, user.id, message]);
+	const query = `INSERT group_messages (group_id, sender_id, message, sent_at) VALUES (?, ?, ?, ?)`;
+	let sentAtTimestamp = new Date().toISOString();
+	sentAtTimestamp = sentAtTimestamp.slice(0, 23).replace('T', ' ');
+	const result: any = await executeReq(query, [group.id, user.id, message, sentAtTimestamp]);
 
 	if (result.affectedRows === 0) {
 		return null;

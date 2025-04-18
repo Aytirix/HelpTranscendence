@@ -9,11 +9,12 @@ export interface User {
 	friends?: Friends[];
 	google_token?: string;
 	avatar?: string;
+	qqt_chat_msg_send?: number;
 }
 
 export interface Message {
 	id: number;
-	sender_id: number;
+	sender_id?: number;
 	message: string;
 	sent_at: Date;
 }

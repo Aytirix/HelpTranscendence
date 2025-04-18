@@ -10,13 +10,13 @@ export interface reponse {
 	action: string;
 }
 
-export interface send_friend_connected {
-	action: 'friend_connected';
-	user: User;
-}
 
-export interface send_connected {
-	action: 'connected';
+
+// Reponse : Intialisation de la connexion
+// Envoi de la liste des groupes et utilisateurs connectés à l'utilisateur
+// Envoi de la liste des amis connectés à l'utilisateur
+export interface send_init_connected {
+	action: 'init_connected';
 	user: User;
 	groups: Group[];
 	friends_connected: User[];
@@ -36,6 +36,27 @@ export interface res_newMessage {
 	message: Message;
 }
 
+// Reponse : Requete pour recuperer x messages qui n'ont pas encore été envoyés
+export interface req_getMessage {
+	action: 'get_message';
+	group_id: number;
+	last_message_id: number;
+}
+
+// Reponse : Requete pour recuperer x messages qui n'ont pas encore été envoyés
+export interface res_getMessage {
+	action: 'get_message';
+	group_id: number;
+	messages: Message[];
+}
+
+// Reponse : Envoyer le message que x c'est connecté a tous ces amis
+export interface send_friend_connected {
+	action: 'friend_connected';
+	user: User;
+}
+
+// Reponse : Envoyer le message que x c'est deconnecté a tous ces amis
 export interface res_disconnect {
 	action: 'user_disconnected';
 	user_id: number;

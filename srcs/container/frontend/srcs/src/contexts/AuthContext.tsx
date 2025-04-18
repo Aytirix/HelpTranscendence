@@ -34,10 +34,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 				const res = await ApiService.get('/isAuth');
 				if (isMounted) {
 					setUser({ isAuthenticated: res.isAuthenticated });
-
-					// if (!res.isAuthenticated && window.location.pathname !== "/login") {
-					// 	navigate('/login');
-					// }
+					if (!res.isAuthenticated && window.location.pathname !== "/login") {
+						navigate('/login');
+					}
 				}
 			} catch (err) {
 				console.error("Auth check failed:", err);

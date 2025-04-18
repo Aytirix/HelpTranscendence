@@ -35,8 +35,11 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, req: IncomingM
 				ws.send(JSON.stringify({ action: 'pong' }));
 				break;
 			case 'new_message':
-				controllersChat.newMessage(ws, ws.user, state, (text as req_newMessage));
+				controllersChat.newMessage(ws, state, (text as req_newMessage));
 				break;
+			case 'get_message':
+					controllersChat.newMessage(ws, state, (text as req_newMessage));
+					break;
 			default:
 				ws.send(/**1008,**/ 'Action non reconnue');
 				break;
