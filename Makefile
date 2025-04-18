@@ -9,6 +9,15 @@ dev:
 build: down
 	NODE_PROJET=production $(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) up --build -d
 
+restart:
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) restart frontend backend
+
+exec-backend:
+	docker exec -it backend zsh
+
+exec-frontend:
+	docker exec -it frontend zsh
+
 down:
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) down --volumes --remove-orphans --rmi all
 	docker volume prune -f
