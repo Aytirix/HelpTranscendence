@@ -2,17 +2,20 @@
 FROM node:18-slim
 
 RUN apt-get update && apt-get install -y \
-	git \
-	zsh \
-	net-tools \
-	bash
+    git \
+    zsh \
+    net-tools \
+    bash \
+    tzdata \
+	psmisc \
+    && rm -rf /var/lib/apt/lists/*
 
-# Creer le fichier de configuration pour sqlite
-RUN mkdir -p /var/lib/sqlite
-RUN touch /var/lib/sqlite/db.sqlite
+RUN ln -fs /usr/share/zoneinfo/Europe/Paris /etc/localtime && dpkg-reconfigure -f noninteractive tzdata
 
-# Copier les fichiers de l'application
+RUN mkdir -p /var/lib/sqlite && touch /var/lib/sqlite/db.sqlite
+
 COPY srcs/ .
+
 RUN chmod +x ./config/start.sh
 
 ENTRYPOINT ["/bin/bash", "./config/start.sh"]

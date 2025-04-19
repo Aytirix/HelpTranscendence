@@ -28,27 +28,49 @@ async function getAllGroupsFromUser(userws: WebSocket, state: State) {
 }
 
 async function getMessagesFromGroup(group: skGroup, limit: number = 20) {
-	const id_first_message = group.messages.length > 0 ? group.messages[0].id : 0;
-	const query = `SELECT * FROM group_messages WHERE group_id = ? AND id > ? ORDER BY sent_at DESC LIMIT ?`;
-	const messages: any = await executeReq(query, [group.id, id_first_message, limit]);
-	if (messages.length === 0) {
+	const firstMessageId = group.messages.length > 0 ? group.messages[0].id : null;
+
+	const sql = `
+	  SELECT id, sender_id, message, sent_at
+	  FROM (
+		SELECT *
+		FROM group_messages
+		WHERE group_id = ?
+		  ${firstMessageId ? 'AND id < ?' : ''}
+		ORDER BY sent_at DESC
+		LIMIT ?
+	  ) AS sub
+	  ORDER BY sent_at ASC
+	`;
+
+	const params = firstMessageId
+		? [group.id, firstMessageId, limit]
+		: [group.id, limit];
+
+	const rows: any =
+		await executeReq(sql, params);
+
+	if (rows.length === 0) {
 		return [];
 	}
-	messages.map((message: any) => {
-		group.messages.push({
-			id: message.id,
-			sender_id: message.sender_id,
-			message: message.message,
-			sent_at: message.sent_at,
-		});
-	});
-	return group.messages;
+
+	const newMessages: Message[] = rows.map(r => ({
+		id: r.id,
+		sender_id: r.sender_id,
+		message: r.message,
+		sent_at: new Date(r.sent_at),
+	}));
+
+	group.messages = [...newMessages, ...group.messages];
+
+	return newMessages;
 }
 
-async function newMessage(group: skGroup, user: User, message: string) {
+
+async function newMessage(group: skGroup, user: User, message: string, sent_at: Date) {
 	const query = `INSERT group_messages (group_id, sender_id, message, sent_at) VALUES (?, ?, ?, ?)`;
-	let sentAtTimestamp = new Date().toISOString();
-	sentAtTimestamp = sentAtTimestamp.slice(0, 23).replace('T', ' ');
+	let sentAtTimestamp = sent_at.getTime();
+	console.log(sentAtTimestamp);
 	const result: any = await executeReq(query, [group.id, user.id, message, sentAtTimestamp]);
 
 	if (result.affectedRows === 0) {
@@ -59,7 +81,7 @@ async function newMessage(group: skGroup, user: User, message: string) {
 		id: result.insertId,
 		sender_id: user.id,
 		message: message,
-		sent_at: new Date(),
+		sent_at: new Date(sentAtTimestamp),
 	};
 	return res;
 }

@@ -27,6 +27,7 @@ export interface req_newMessage {
 	action: string;
 	group_id: number;
 	message: string;
+	sent_at: Date;
 }
 
 // Envoyer le message a toutes les personnes de la conversation
@@ -37,15 +38,15 @@ export interface res_newMessage {
 }
 
 // Reponse : Requete pour recuperer x messages qui n'ont pas encore été envoyés
-export interface req_getMessage {
-	action: 'get_message';
+export interface req_loadMoreMessage {
+	action: 'loadMoreMessage';
 	group_id: number;
-	last_message_id: number;
+	firstMessageId: number;
 }
 
 // Reponse : Requete pour recuperer x messages qui n'ont pas encore été envoyés
-export interface res_getMessage {
-	action: 'get_message';
+export interface res_loadMoreMessage {
+	action: 'loadMoreMessage';
 	group_id: number;
 	messages: Message[];
 }
@@ -66,6 +67,7 @@ export interface req_ping {
 	action: 'ping';
 }
 
-export interface req_pong {
+export interface res_pong {
 	action: 'pong';
+	time: number;
 }

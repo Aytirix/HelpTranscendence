@@ -1,5 +1,5 @@
-import { skGroup, User } from '@types';
-import { send_friend_connected, req_newMessage, res_newMessage, State, send_init_connected, req_getMessage, res_getMessage } from '@typesChat';
+import { Message, skGroup, User } from '@types';
+import { send_friend_connected, req_newMessage, res_newMessage, State, send_init_connected, req_loadMoreMessage, res_loadMoreMessage } from '@typesChat';
 import { WebSocketServer, WebSocket } from 'ws';
 import modelsChat from '@models/modelChat';
 import modelsFriends from '@models/modelFriends';
@@ -80,7 +80,32 @@ export const newMessage = async (wsSender: WebSocket, state: State, req: req_new
 	if (!userInGroup(wsSender, group)) return;
 
 	// stockage du message dans la base de données
-	const newMessage = await modelsChat.newMessage(group, wsSender.user, req.message);
+	if (!req.message) {
+		wsSender.send(JSON.stringify({ action: 'error', message: 'Message manquant' }));
+		return;
+	}
+
+	if (!req.sent_at) {
+		wsSender.send(JSON.stringify({ action: 'error', message: 'Date d\'envoi manquante' }));
+		return;
+	}
+
+	if (req.message.length > 1000) {
+		wsSender.send(JSON.stringify({ action: 'error', message: 'Message trop long' }));
+		return;
+	}
+
+	//Si la difference entre la date d'envoi et la date actuelle est superieur a 1 saeconde
+	const currentDate = new Date();
+	const sentAtDate = new Date(req.sent_at);
+	const diff = Math.abs(currentDate.getTime() - sentAtDate.getTime());
+	console.log(`diff new message (en ms): ${diff}`);
+	if (diff > 1000) {
+		wsSender.send(JSON.stringify({ action: 'error', message: 'Date d\'envoi invalide' }));
+		return;
+	}
+
+	const newMessage = await modelsChat.newMessage(group, wsSender.user, req.message, sentAtDate);
 	if (!newMessage) {
 		wsSender.send(JSON.stringify({ action: 'error', message: 'Erreur lors de l\'envoi du message' }));
 		return;
@@ -102,42 +127,35 @@ export const newMessage = async (wsSender: WebSocket, state: State, req: req_new
 	});
 };
 
-export const getMessage = async (ws: WebSocket, state: State, req: req_getMessage) => {
+export const loadMoreMessage = async (ws: WebSocket, state: State, req: req_loadMoreMessage) => {
 	const group = groupExists(ws, state, req.group_id);
 	if (!group) return;
 
 	if (!userInGroup(ws, group)) return;
 
-	if (!req.last_message_id) {
+	if (!req.firstMessageId) {
 		ws.send(JSON.stringify({ action: 'error', message: 'ID du message manquant' }));
 		return;
 	}
 
-	// verifier si le last_message_id est dans le groupe
-	const lastMessage = group.messages.find((message: any) => message.id === req.last_message_id);
-	if (!lastMessage) {
+	// verifier si le firstMessageId est dans le groupe
+	const index = group.messages.findIndex((message: Message) => message.id === req.firstMessageId);
+	if (index === -1) {
 		ws.send(JSON.stringify({ action: 'error', message: 'Message non trouvé' }));
 		return;
 	}
 
-	// voir combien il y a de message apres le lastMessage deja recuperer de la db
-	const index = group.messages.indexOf(lastMessage);
-	const messagesToGet = group.messages.slice(index + 1);
+	// voir combien il y a de message avant le lastMessage deja recuperer de la db
+	const messagesToGet = group.messages.slice(0, index);
 	let messages: any[] = [];
 	if (messagesToGet.length >= 20) {
 		messages = messagesToGet.slice(index + 1, index + 20);
 	} else {
-		// on va chercher les messages dans la db jusqu'a 20 messages
-		const limit = 20 - messagesToGet.length;
-		const messagesFromDb = await modelsChat.getMessagesFromGroup(group, limit);
+		const messagesFromDb = await modelsChat.getMessagesFromGroup(group, 20);
 		messages = messagesToGet.concat(messagesFromDb);
 	}
-	if (messages.length === 0) {
-		ws.send(JSON.stringify({ action: 'error', message: 'Aucun message trouvé' }));
-		return;
-	}
-	const send: res_getMessage = {
-		action: 'get_message',
+	const send: res_loadMoreMessage = {
+		action: 'loadMoreMessage',
 		group_id: group.id,
 		messages: messages,
 	};
@@ -147,5 +165,5 @@ export const getMessage = async (ws: WebSocket, state: State, req: req_getMessag
 export default {
 	init_connexion,
 	newMessage,
-	getMessage,
+	loadMoreMessage: loadMoreMessage,
 };

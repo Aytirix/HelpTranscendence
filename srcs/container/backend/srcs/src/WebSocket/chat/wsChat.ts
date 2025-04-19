@@ -1,5 +1,5 @@
 import { skGroup, User } from '@types';
-import { State, reponse, req_newMessage } from '@typesChat';
+import { State, reponse, req_loadMoreMessage, req_newMessage, res_pong } from '@typesChat';
 import { IncomingMessage } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import modelsChat from '@models/modelChat';
@@ -32,14 +32,19 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, req: IncomingM
 
 		switch (action) {
 			case 'ping':
-				ws.send(JSON.stringify({ action: 'pong' }));
+				const pong: res_pong = {
+					action: 'pong',
+					time: Date.now(),
+				};
+				console.log('Ping reçu, envoi de pong date:', pong.time);
+				ws.send(JSON.stringify(pong));
 				break;
 			case 'new_message':
 				controllersChat.newMessage(ws, state, (text as req_newMessage));
 				break;
-			case 'get_message':
-					controllersChat.newMessage(ws, state, (text as req_newMessage));
-					break;
+			case 'loadMoreMessage':
+				controllersChat.loadMoreMessage(ws, state, (text as req_loadMoreMessage));
+				break;
 			default:
 				ws.send(/**1008,**/ 'Action non reconnue');
 				break;

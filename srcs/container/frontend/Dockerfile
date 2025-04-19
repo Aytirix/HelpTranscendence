@@ -5,7 +5,12 @@ RUN apt-get update && apt-get install -y \
 	git \
 	zsh \
 	net-tools \
-	bash
+	bash \
+	tzdata \
+	psmisc \
+	&& rm -rf /var/lib/apt/lists/*
+
+RUN ln -fs /usr/share/zoneinfo/Europe/Paris /etc/localtime && dpkg-reconfigure -f noninteractive tzdata
 
 # Copier les fichiers de l'application
 COPY srcs/ .
