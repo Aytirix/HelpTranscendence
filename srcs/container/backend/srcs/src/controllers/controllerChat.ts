@@ -1,9 +1,10 @@
-import { Message, skGroup, User } from '@types';
+import { Group, Message, User } from '@types';
 import { send_friend_connected, req_newMessage, res_newMessage, State, send_init_connected, req_loadMoreMessage, res_loadMoreMessage } from '@typesChat';
 import { WebSocketServer, WebSocket } from 'ws';
 import modelsChat from '@models/modelChat';
 import modelsFriends from '@models/modelFriends';
 import { IncomingMessage } from 'http';
+import controllerFriends from './controllerFriends';
 
 /*
  * Vérifie si le groupe existe
@@ -12,10 +13,10 @@ import { IncomingMessage } from 'http';
  * @param group_id ID du groupe à vérifier
  * @returns Le groupe si trouvé, sinon false
 */
-export function groupExists(wsSender: WebSocket, state: State, group_id: number): skGroup | false {
-	const group = state.groups.find((group: skGroup) => group.id === group_id);
+export function groupExists(ws: WebSocket, state: State, group_id: number): Group | false {
+	const group = state.groups.find((group: Group) => group.id === group_id);
 	if (!group) {
-		wsSender.send(JSON.stringify({ action: 'error', message: 'Groupe non trouvé' }));
+		ws.send(JSON.stringify({ action: 'error', message: 'Groupe non trouvé' }));
 		return false;
 	}
 	return group;
@@ -27,71 +28,99 @@ export function groupExists(wsSender: WebSocket, state: State, group_id: number)
  * @param group Groupe à vérifier
  * @returns true si l'utilisateur est membre du groupe, false sinon
 */
-export function userInGroup(userws: WebSocket, group: skGroup): boolean {
-	const res: boolean = group.members.some((userGroupws: WebSocket) => userGroupws.user.id === userws.user.id);
+export function userInGroup(ws: WebSocket, user: User, group: Group): boolean {
+	const res: boolean = group.members.some((member: User) => member.id === user.id);
 	if (!res) {
-		userws.send(JSON.stringify({ action: 'error', message: 'Vous n\'êtes pas membre de ce groupe' }));
+		ws.send(JSON.stringify({ action: 'error', message: 'Vous n\'êtes pas membre de ce groupe' }));
 		return false;
 	}
 	return true;
 }
 
-export const init_connexion = async (ws: WebSocket, req: IncomingMessage, state: State) => {
-	console.log('Nouvelle connexion de l\'utilisateur:', ws.user.id);
-	if (!state.users_connected.some(userws => userws.user.id === ws.user.id)) {
-		state.users_connected.push(ws);
-		await modelsChat.getAllGroupsFromUser(ws, state);
-		ws.user.friends = await modelsFriends.getAllFriendFromUser(ws.user);
-
-		// Envoi de l'information de connexion à tous les amis connectés
-		const friendsConnected = state.users_connected.filter((userws: WebSocket) => {
-			return ws.user.friends.some(friend => friend.friend_id === userws.user.id && friend.friend_id !== ws.user.id);
-		});
-
-		friendsConnected.forEach((userws: WebSocket) => {
-			const send: send_friend_connected = {
-				action: 'friend_connected',
-				user: ws.user,
-			};
-			userws.send(JSON.stringify(send));
-		});
-
-		// Envoi de la liste des groupes et utilisateurs connectés à l'utilisateur
-		const send: send_init_connected = {
-			action: 'init_connected',
-			user: ws.user,
-			groups: state.groups.map(group => (
-				{
-					id: group.id,
-					name: group.name,
-					members: group.members.map(userws => userws.user),
-					messages: group.messages.slice(-20),
-				})),
-			friends_connected: friendsConnected.map(userws => userws.user),
-		};
-		ws.send(JSON.stringify(send));
-	}
+export const addOnlineUser = (state: State, ws: WebSocket, user: User) => {
+	state.user.set(user.id, user);
+	state.onlineSockets.set(user.id, ws);
 };
 
-export const newMessage = async (wsSender: WebSocket, state: State, req: req_newMessage) => {
-	const group = groupExists(wsSender, state, req.group_id);
+export const removeOnlineUser = (state: State, user: User) => {
+	state.user.delete(user.id);
+	state.onlineSockets.delete(user.id);
+};
+
+export const init_connexion = async (ws: WebSocket, user: User, req: IncomingMessage, state: State) => {
+	console.log('Nouvelle connexion de l\'utilisateur:', user.id);
+	addOnlineUser(state, ws, user);
+	await modelsChat.getAllGroupsFromUser(user, state);
+
+	// Envoi de l'information de connexion à tous les amis connectés
+	const friendsConnected = controllerFriends.getConnectedFriends(user.id, state);
+
+	friendsConnected.forEach((friend: User) => {
+		const userws = state.onlineSockets.get(friend.id);
+		if (!userws) return;
+		const send: send_friend_connected = {
+			action: 'friend_connected',
+			user: user,
+		};
+		userws.send(JSON.stringify(send));
+	});
+
+	// Envoi de la liste des groupes et utilisateurs connectés à l'utilisateur
+	const send: send_init_connected = {
+		action: 'init_connected',
+		user: user,
+		groups: state.groups.map(group => (
+			{
+				id: group.id,
+				name: group.name,
+				members: group.members,
+				owners_id: group.owners_id,
+				onlines_id: group.onlines_id,
+				messages: group.messages.slice(-20),
+			})),
+		friends_connected: friendsConnected,
+	};
+	ws.send(JSON.stringify(send));
+};
+
+export const user_disconnected = async (ws: WebSocket, user: User, state: State) => {
+	console.log('Déconnexion de l\'utilisateur:', user.id);
+
+	for (const group of state.groups) {
+		group.members = group.members.filter(member => member.id !== user.id);
+		group.members.forEach(member => {
+			const wsMember = state.onlineSockets.get(member.id);
+			if (wsMember && wsMember.readyState === WebSocket.OPEN) {
+				wsMember.send(JSON.stringify({
+					action: 'user_disconnected',
+					user: user.id,
+				}));
+			}
+		});
+	}
+	removeOnlineUser(state, user);
+};
+
+
+export const newMessage = async (ws: WebSocket, user: User, state: State, req: req_newMessage) => {
+	const group = groupExists(ws, state, req.group_id);
 	if (!group) return;
 
-	if (!userInGroup(wsSender, group)) return;
+	if (!userInGroup(ws, user, group)) return;
 
 	// stockage du message dans la base de données
 	if (!req.message) {
-		wsSender.send(JSON.stringify({ action: 'error', message: 'Message manquant' }));
+		ws.send(JSON.stringify({ action: 'error', message: 'Message manquant' }));
 		return;
 	}
 
 	if (!req.sent_at) {
-		wsSender.send(JSON.stringify({ action: 'error', message: 'Date d\'envoi manquante' }));
+		ws.send(JSON.stringify({ action: 'error', message: 'Date d\'envoi manquante' }));
 		return;
 	}
 
 	if (req.message.length > 1000) {
-		wsSender.send(JSON.stringify({ action: 'error', message: 'Message trop long' }));
+		ws.send(JSON.stringify({ action: 'error', message: 'Message trop long' }));
 		return;
 	}
 
@@ -99,15 +128,14 @@ export const newMessage = async (wsSender: WebSocket, state: State, req: req_new
 	const currentDate = new Date();
 	const sentAtDate = new Date(req.sent_at);
 	const diff = Math.abs(currentDate.getTime() - sentAtDate.getTime());
-	console.log(`diff new message (en ms): ${diff}`);
-	if (diff > 1000) {
-		wsSender.send(JSON.stringify({ action: 'error', message: 'Date d\'envoi invalide' }));
+	if (diff > 500) {
+		ws.send(JSON.stringify({ action: 'error', message: `Date d\'envoi invalide, différence de ${diff}ms` }));
 		return;
 	}
 
-	const newMessage = await modelsChat.newMessage(group, wsSender.user, req.message, sentAtDate);
+	const newMessage = await modelsChat.newMessage(group, user, req.message, sentAtDate);
 	if (!newMessage) {
-		wsSender.send(JSON.stringify({ action: 'error', message: 'Erreur lors de l\'envoi du message' }));
+		ws.send(JSON.stringify({ action: 'error', message: 'Erreur lors de l\'envoi du message' }));
 		return;
 	}
 
@@ -117,32 +145,35 @@ export const newMessage = async (wsSender: WebSocket, state: State, req: req_new
 		group_id: group.id,
 		message: newMessage,
 	};
-	group.members.forEach((memberws: WebSocket) => {
-		if (memberws.user.id !== wsSender.user.id) {
-			const wsMember = state.users_connected.find((userws: WebSocket) => userws.user.id === memberws.user.id);
-			if (wsMember) {
-				memberws.send(JSON.stringify(messageToSend));
-			}
+
+	group.members.forEach((member: User) => {
+		const wsMember = state.onlineSockets.get(member.id);
+		if (wsMember && wsMember.readyState === WebSocket.OPEN) {
+			wsMember.send(JSON.stringify(messageToSend));
 		}
 	});
 };
 
-export const loadMoreMessage = async (ws: WebSocket, state: State, req: req_loadMoreMessage) => {
+export const loadMoreMessage = async (ws: WebSocket, user: User, state: State, req: req_loadMoreMessage) => {
 	const group = groupExists(ws, state, req.group_id);
 	if (!group) return;
 
-	if (!userInGroup(ws, group)) return;
+	if (!userInGroup(ws, user, group)) return;
 
-	if (!req.firstMessageId) {
+	if (req.firstMessageId < 0) {
 		ws.send(JSON.stringify({ action: 'error', message: 'ID du message manquant' }));
 		return;
 	}
 
-	// verifier si le firstMessageId est dans le groupe
-	const index = group.messages.findIndex((message: Message) => message.id === req.firstMessageId);
-	if (index === -1) {
-		ws.send(JSON.stringify({ action: 'error', message: 'Message non trouvé' }));
-		return;
+	let index = 0;
+
+	if (req.firstMessageId > 0) {
+		// verifier si le firstMessageId est dans le groupe
+		index = group.messages.findIndex((message: Message) => message.id === req.firstMessageId);
+		if (index === -1) {
+			ws.send(JSON.stringify({ action: 'error', message: 'Message non trouvé' }));
+			return;
+		}
 	}
 
 	// voir combien il y a de message avant le lastMessage deja recuperer de la db
@@ -164,6 +195,9 @@ export const loadMoreMessage = async (ws: WebSocket, state: State, req: req_load
 
 export default {
 	init_connexion,
+	user_disconnected,
 	newMessage,
-	loadMoreMessage: loadMoreMessage,
+	loadMoreMessage,
+	addOnlineUser,
+	removeOnlineUser,
 };

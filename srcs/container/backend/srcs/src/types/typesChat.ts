@@ -1,15 +1,17 @@
-import { skGroup, Message, User, Group } from "@types";
+import { Group, Message, User, Friends } from "@types";
 import { WebSocketServer, WebSocket } from 'ws';
 
 export interface State {
-	groups: skGroup[];
-	users_connected: WebSocket[];
+	user: Map<number, User>;
+	onlineSockets: Map<number, WebSocket>;
+	groups: Group[];
+	friends: Friends[];
+	friendsByUser: Map<number, number[]>;
 }
 
 export interface reponse {
 	action: string;
 }
-
 
 
 // Reponse : Intialisation de la connexion
@@ -59,7 +61,7 @@ export interface send_friend_connected {
 
 // Reponse : Envoyer le message que x c'est deconnecté a tous ces amis
 export interface res_disconnect {
-	action: 'user_disconnected';
+	action: 'friend_disconnected';
 	user_id: number;
 }
 
@@ -69,5 +71,5 @@ export interface req_ping {
 
 export interface res_pong {
 	action: 'pong';
-	time: number;
+	server_time: number;
 }

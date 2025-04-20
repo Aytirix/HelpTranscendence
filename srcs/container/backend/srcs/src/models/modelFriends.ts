@@ -1,26 +1,24 @@
 import { User, Friends } from '@types';
 import executeReq from '@models/database';
+import { State } from '@typesChat';
+import { WebSocketServer, WebSocket } from 'ws';
 
-async function getAllFriendFromUser(user: User) {
-	const query = `SELECT * FROM friends WHERE user_one_id = ? OR user_two_id = ?`;
-	const friends: any = await executeReq(query, [user.id, user.id]);
-	if (friends.length === 0) {
-		return [];
-	}
+async function loadAllFriendRelationsFromDB(): Promise<Friends[]> {
+	const query = `SELECT * FROM friends`;
+	const result: any = await executeReq(query);
 
-	const list_friends: Friends[] = [];
+	if (result.length === 0) return [];
 
-	await Promise.all(friends.map(async (friend: any) => {
-		list_friends.push({
-			id: friend.id,
-			friend_id: friend.user_one_id === user.id ? friend.user_two_id : friend.user_one_id,
-			target: friend.target,
-			status: friend.status,
-		});
-	}));
-	return list_friends;
+	return result.map((friend: any) => ({
+		id: friend.id,
+		user_one_id: friend.user_one_id,
+		user_two_id: friend.user_two_id,
+		target: friend.target,
+		status: friend.status,
+	})) as Friends[];
 }
 
+
 export default {
-	getAllFriendFromUser,
+	loadAllFriendRelationsFromDB,
 }

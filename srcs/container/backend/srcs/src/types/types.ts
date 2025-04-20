@@ -6,10 +6,8 @@ export interface User {
 	username: string;
 	password?: string;
 	lang: string;
-	friends?: Friends[];
 	google_token?: string;
 	avatar?: string;
-	qqt_chat_msg_send?: number;
 }
 
 export interface Message {
@@ -19,24 +17,19 @@ export interface Message {
 	sent_at: Date;
 }
 
-export interface skGroup {
-	id: number;
-	name: string;
-	members: WebSocket[];
-	messages: Message[];
-}
-
 export interface Group {
 	id: number;
 	name: string;
 	members: User[];
+	owners_id: number[];
+	onlines_id: number[];
 	messages: Message[];
 }
 
-
 export interface Friends {
 	id: number;
-	friend_id: number;
+	user_one_id: number;
+	user_two_id: number;
 	target: string;
-	status: string;
+	status: 'friend' |'blocked' | 'pending';
 }

@@ -6,7 +6,7 @@ DOCKER_COMPOSE=docker-compose
 dev:
 	NODE_PROJET=dev $(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) up --build -d
 
-build: down
+prod: down
 	NODE_PROJET=production $(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) up --build -d
 
 restart:

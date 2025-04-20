@@ -15,9 +15,3 @@ declare module 'fastify' {
 		session: SessionData;
 	}
 }
-
-declare module 'ws' {
-	interface WebSocket {
-		user: User;
-	}
-}

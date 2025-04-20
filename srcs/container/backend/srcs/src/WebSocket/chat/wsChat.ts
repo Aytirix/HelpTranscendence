@@ -1,18 +1,27 @@
-import { skGroup, User } from '@types';
+import { Friends, Group, User } from '@types';
 import { State, reponse, req_loadMoreMessage, req_newMessage, res_pong } from '@typesChat';
 import { IncomingMessage } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import modelsChat from '@models/modelChat';
 import modelsFriends from '@models/modelFriends';
-import controllersChat from '@controllers/controllerChat';
+import controllersChat, { removeOnlineUser } from '@controllers/controllerChat';
+import controllerFriends from '@controllers/controllerFriends';
 
 const state: State = {
-	groups: [] as skGroup[],
-	users_connected: [] as WebSocket[],
-}
+	user: new Map<number, User>(),
+	onlineSockets: new Map<number, WebSocket>(),
+	groups: [] as Group[],
+	friends: [] as Friends[],
+	friendsByUser: new Map<number, number[]>(),
+};
 
-async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, req: IncomingMessage): Promise<void> {
-	controllersChat.init_connexion(ws, req, state);
+(async () => {
+	state.friends = await modelsFriends.loadAllFriendRelationsFromDB();
+	state.friendsByUser = controllerFriends.buildFriendsMap(state.friends);
+})();
+
+async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, req: IncomingMessage): Promise<void> {
+	controllersChat.init_connexion(ws, user, req, state);
 	ws.on('message', (message: Buffer) => {
 		var text: reponse | null = null;
 		try {
@@ -34,16 +43,15 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, req: IncomingM
 			case 'ping':
 				const pong: res_pong = {
 					action: 'pong',
-					time: Date.now(),
+					server_time: Date.now(),
 				};
-				console.log('Ping reçu, envoi de pong date:', pong.time);
 				ws.send(JSON.stringify(pong));
 				break;
 			case 'new_message':
-				controllersChat.newMessage(ws, state, (text as req_newMessage));
+				controllersChat.newMessage(ws, user, state, (text as req_newMessage));
 				break;
 			case 'loadMoreMessage':
-				controllersChat.loadMoreMessage(ws, state, (text as req_loadMoreMessage));
+				controllersChat.loadMoreMessage(ws, user, state, (text as req_loadMoreMessage));
 				break;
 			default:
 				ws.send(/**1008,**/ 'Action non reconnue');
@@ -51,38 +59,23 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, req: IncomingM
 		}
 		ws.send(JSON.stringify({
 			action: 'state',
-			groups: state.groups.map(group => ({
-				id: group.id,
-				name: group.name,
-				members: group.members.map(userws => userws.user),
-				messages: group.messages,
-			})),
-			users_connected: state.users_connected.map(userws => userws.user),
+			state: {
+				groups: state.groups,
+				friends: state.friends,
+				friendsByUser: state.friendsByUser,
+				friends_connected: state.user,
+				user: user,
+			}
 		}));
 	});
 
 	ws.on('close', () => {
-		console.log('Déconnexion de l\'utilisateur:', ws.user?.id);
-		state.users_connected = state.users_connected.filter(userws => userws.user.id !== ws.user?.id);
-		state.groups = state.groups.map(group => {
-			group.members = group.members.filter(userws => userws.user.id !== ws.user?.id);
-			group.members.forEach(member => {
-				if (member.readyState === WebSocket.OPEN) {
-					member.send(JSON.stringify({
-						action: 'user_disconnected',
-						user: ws.user.id
-					}));
-				}
-			});
-			return group;
-		}
-		);
-		// state.groups = state.groups.filter(group => group.members.length > 0);
-		ws.send('Vous avez été déconnecté.');
+		console.log('Déconnexion de l\'utilisateur:', user?.id);
+		controllersChat.user_disconnected(ws, user, state);
 	});
 
 	ws.on('error', (error: Error) => {
-		state.users_connected = state.users_connected.filter(user => ws.user.id !== (ws as any).user?.id);
+		removeOnlineUser(state, user);
 		console.error('Erreur WebSocket:', error);
 		if (ws.readyState === WebSocket.OPEN) {
 			ws.close(1008, 'Erreur WebSocket');

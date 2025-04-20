@@ -1,285 +1,356 @@
-import { useEffect, useState, useRef } from 'react';
-import { Send } from 'lucide-react';
+import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
+import { Send, Loader2 } from 'lucide-react';
+import { format, isToday, isYesterday } from 'date-fns';
+import useSafeWebSocket from '../api/useSafeWebSocket';
 
-interface User {
-	id: number;
-	username: string;
-	email: string;
-	avatar: string | null;
-	lang: string;
-	friends: any[];
-}
+// === Theme Context ===
+const ThemeContext = createContext({ dark: false, toggle: () => {} });
+const useTheme = () => useContext(ThemeContext);
 
-interface Message {
-	id: number;
-	sender_id: number;
-	message: string;
-	sent_at: string;
-}
+// Pagination constant
+const PAGE_SIZE = 20;
 
-interface Group {
-	id: number;
-	name: string;
-	members: User[];
-	messages: Message[];
-}
+// === Sub-components ===
+const Skeleton: React.FC<{ height?: string }> = ({ height = '1rem' }) => (
+  <div className="animate-pulse bg-gray-200 rounded" style={{ height, width: '100%' }} />
+);
+
+const Avatar: React.FC<{ src: string | null; alt: string }> = ({ src, alt }) => (
+  src ? (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      className="w-12 h-12 rounded-full object-cover border-2 border-white"
+    />
+  ) : (
+    <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-gray-600">
+      {alt.charAt(0)}
+    </div>
+  )
+);
+
+const GroupList: React.FC<{ groups: Group[]; activeId: number | null; onSelect: (id: number) => void }> = ({ groups, activeId, onSelect }) => (
+  <div>
+    <h2 className="text-xl font-bold mb-3">Mes groupes</h2>
+    {groups.length > 0 ? (
+      groups.map(g => (
+        <button
+          key={g.id}
+          onClick={() => onSelect(g.id)}
+          className={`w-full text-left p-3 rounded-lg mb-2 transition-shadow ${
+            g.id === activeId ? 'bg-blue-600 text-white shadow-lg' : 'bg-white hover:shadow-md'
+          }`}
+        >
+          {g.name}
+        </button>
+      ))
+    ) : (
+      <p className="text-gray-500">Aucun groupe</p>
+    )}
+  </div>
+);
+
+const FriendsList: React.FC<{ friends: User[] }> = ({ friends }) => (
+  <div>
+    <h2 className="text-xl font-bold mb-3">Amis en ligne</h2>
+    {friends.length > 0 ? (
+      friends.map(u => (
+        <div key={u.id} className="flex items-center mb-3">
+          <Avatar src={u.avatar} alt={u.username} />
+          <span className="ml-3 font-medium">{u.username}</span>
+        </div>
+      ))
+    ) : (
+      <p className="text-gray-500">Aucun ami</p>
+    )}
+  </div>
+);
+
+const ChatHeader: React.FC<{ title: string; status: string; duration: string }> = ({ title, status, duration }) => {
+  const { dark, toggle } = useTheme();
+  return (
+    <header
+      className={`p-4 flex justify-between items-center border-b ${
+        dark ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-200'
+      }`}
+    >
+      <h2 className="text-2xl font-semibold truncate">{title}</h2>
+      <div className="flex items-center space-x-4">
+        <button onClick={toggle} aria-label="Toggle theme">
+          {dark ? '☀️' : '🌙'}
+        </button>
+        <span
+          className={`px-3 py-1 rounded-full text-sm ${
+            status === 'Connected' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          }`}
+        >
+          {status}
+        </span>
+        <span className="text-gray-500">{duration}</span>
+      </div>
+    </header>
+  );
+};
+
+type Message = { id: number; sender_id: number; message: string; sent_at: string };
+type User = { id: number; username: string; email: string; avatar: string | null; lang: string; friends: any[] };
+type Group = { id: number; name: string; members: User[]; messages: Message[] };
+
+const MessageItem: React.FC<{ msg: Message; isOwn: boolean }> = ({ msg, isOwn }) => (
+  <div
+    className={`${
+      isOwn ? 'ml-auto bg-blue-600 text-white' : 'mr-auto bg-gray-100 text-gray-800'
+    } p-3 rounded-xl max-w-xs`}
+  >
+    <p>{msg.message}</p>
+    <span className="text-xs block text-right text-gray-400 mt-1">
+      {format(new Date(msg.sent_at), 'HH:mm')}
+    </span>
+  </div>
+);
+
+const MessageList: React.FC<{
+  messages: Message[];
+  currentUserId: number | null;
+  isLoading: boolean;
+  onScroll: (atBottom: boolean) => void;
+}> = ({ messages, currentUserId, isLoading, onScroll }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const grouped = React.useMemo(() => {
+    return messages.reduce((acc: Record<string, Message[]>, msg) => {
+      const date = new Date(msg.sent_at);
+      const key = isToday(date)
+        ? 'Aujourd’hui'
+        : isYesterday(date)
+        ? 'Hier'
+        : format(date, 'dd MMM yyyy');
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(msg);
+      return acc;
+    }, {});
+  }, [messages]);
+
+  const handleScroll = () => {
+    const el = containerRef.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop === el.clientHeight;
+    onScroll(atBottom);
+  };
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
+
+  if (isLoading) {
+    return (
+      <div className="p-4 space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} height="60px" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
+    >
+      {Object.entries(grouped).map(([day, msgs]) => (
+        <div key={day}>
+          <div className="text-center text-gray-500 my-2">{day}</div>
+          {msgs.map(msg => (
+            <MessageItem key={msg.id} msg={msg} isOwn={msg.sender_id === currentUserId} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const MessageInput: React.FC<{ value: string; onChange: (v: string) => void; onSend: () => void }> = ({ value, onChange, onSend }) => (
+  <div className="p-4 border-t flex items-center space-x-3 bg-white">
+    <input
+      type="text"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder="Tapez un message..."
+      className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+      aria-label="Message input"
+    />
+    <button
+      onClick={onSend}
+      disabled={!value.trim()}
+      className="p-2 rounded-full bg-blue-600 text-white disabled:opacity-50"
+    >
+      <Send />
+    </button>
+  </div>
+);
 
 export default function WebSocketChat() {
-	const [status, setStatus] = useState<'Connecting...' | 'Connected' | 'Closed' | 'Error'>('Connecting...');
-	const [currentUser, setCurrentUser] = useState<User | null>(null);
-	const [friendsConnected, setFriendsConnected] = useState<User[]>([]);
-	const [groups, setGroups] = useState<Group[]>([]);
-	const [activeGroupId, setActiveGroupId] = useState<number | null>(null);
-	const [input, setInput] = useState('');
-	const [duration, setDuration] = useState('0s');
-	const [loadingMore, setLoadingMore] = useState(false);
+  const [dark, setDark] = useState(false);
+  const toggle = () => setDark(prev => !prev);
 
-	const socketRef = useRef<WebSocket | null>(null);
-	const startRef = useRef<Date | null>(null);
-	const currentUserIdRef = useRef<number | null>(null);
-	const containerRef = useRef<HTMLDivElement | null>(null);
-	const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const [status, setStatus] = useState<'Connecting...'|'Connected'|'Closed'|'Error'|'Reconnecting'>('Connecting...');
+  const [currentUser, setCurrentUser] = useState<User|null>(null);
+  const [friends, setFriends] = useState<User[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [activeId, setActiveId] = useState<number|null>(null);
+  const [input, setInput] = useState('');
+  const [duration, setDuration] = useState('0h 0m 0s');
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [atBottom, setAtBottom] = useState(true);
 
-	// Auto-scroll on new messages or group change
-	useEffect(() => {
-		if (!loadingMore) {
-			messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-		}
-	}, [groups, activeGroupId, loadingMore]);
+  const startRef = useRef(Date.now());
+  const currentUserIdRef = useRef<number|null>(null);
 
-	// Initialize WebSocket and handlers
-	useEffect(() => {
-		const socket = new WebSocket('wss://localhost:7000/chat');
-		socketRef.current = socket;
+  useEffect(() => {
+    const iv = setInterval(() => {
+      const diff = Date.now() - startRef.current;
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setDuration(`${h}h ${m}m ${s}s`);
+    }, 1000);
+    return () => clearInterval(iv);
+  }, []);
 
-		let hbInterval: NodeJS.Timeout;
-		let timerInterval: NodeJS.Timeout;
+  const loadHistory = (groupId: number, firstMessageId: number) => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    setLoadingHistory(true);
+    ws.send(JSON.stringify({ action: 'loadMoreMessage', group_id: groupId, firstMessageId }));
+  };
 
-		socket.onopen = () => {
-			setStatus('Connected');
-			startRef.current = new Date();
+  const handleMessage = (data: any) => {
+    const { action } = data;
+    switch (action) {
+      case 'init_connected': {
+        setCurrentUser(data.user);
+        currentUserIdRef.current = data.user.id;
+        setFriends(data.friends_connected || []);
+        setGroups(data.groups || []);
+        if (data.groups.length) {
+          setActiveId(data.groups[0].id);
+          loadHistory(data.groups[0].id, 0);
+        }
+        break;
+      }
+      case 'friend_connected':
+        setFriends(prev => [...prev, data.user]);
+        break;
+      case 'user_disconnected':
+        setFriends(prev => prev.filter(u => u.id !== data.user));
+        break;
+      case 'typing': {
+        if (!typingUsers.includes(data.username)) {
+          setTypingUsers(prev => [...prev, data.username]);
+          setTimeout(() => setTypingUsers(u => u.filter(n => n !== data.username)), 2500);
+        }
+        break;
+      }
+      case 'loadMoreMessage': {
+        const { group_id, messages } = data;
+        setGroups(prev => prev.map(g => g.id === group_id ? { ...g, messages: [...messages, ...g.messages] } : g));
+        setLoadingHistory(false);
+        setHasMoreHistory(messages.length === PAGE_SIZE);
+        break;
+      }
+      case 'new_message': {
+        const { group_id, message } = data;
+        if (message.sender_id === currentUserIdRef.current) return;
+        setGroups(prev => prev.map(g => {
+          if (g.id !== group_id) return g;
+          return { ...g, messages: [...g.messages, message] };
+        }));
+        break;
+      }
+      default:
+        break;
+    }
+  };
 
-			// Heartbeat ping
-			hbInterval = setInterval(() => {
-				if (socket.readyState === WebSocket.OPEN) {
-					socket.send(JSON.stringify({ action: 'ping' }));
-				}
-			}, 50000);
+  const { socket: ws, status: wsStatus } = useSafeWebSocket({ endpoint: '/chat', onMessage: handleMessage, onStatusChange: setStatus, reconnectDelay: 3000 });
+  useEffect(() => setStatus(wsStatus), [wsStatus]);
 
-			// Session timer
-			timerInterval = setInterval(() => {
-				if (startRef.current) {
-					const diff = Date.now() - startRef.current.getTime();
-					const hrs = Math.floor(diff / 3600000);
-					const mins = Math.floor((diff % 3600000) / 60000);
-					const secs = Math.floor((diff % 60000) / 1000);
-					setDuration(`${hrs}h ${mins}m ${secs}s`);
-				}
-			}, 1000);
-		};
+  useEffect(() => {
+    if (activeId !== null) {
+      const grp = groups.find(g => g.id === activeId);
+      if (grp && grp.messages.length === 0) loadHistory(activeId, 0);
+    }
+  }, [activeId]);
 
-		socket.onmessage = (event) => {
-			try {
-				const data = JSON.parse(event.data);
-				switch (data.action) {
-					case 'init_connected':
-						setCurrentUser(data.user);
-						currentUserIdRef.current = data.user.id;
-						setFriendsConnected(data.friends_connected || []);
-						setGroups(data.groups || []);
-						if (data.groups?.length > 0) setActiveGroupId(data.groups[0].id);
-						break;
-					case 'friend_connected':
-						setFriendsConnected(prev => [...prev, data.user]);
-						break;
-					case 'user_disconnected':
-						setFriendsConnected(prev => prev.filter(u => u.id !== data.user));
-						break;
-					case 'loadMoreMessage': {
-						const { group_id, messages } = data;
-						setGroups(prev => prev.map(g => {
-							if (g.id === group_id) {
-								const existingMessageIds = new Set(g.messages.map(msg => msg.id));
-								const uniqueMessages = messages.filter((msg: Message ) => !existingMessageIds.has(msg.id));
-								return { ...g, messages: [...uniqueMessages, ...g.messages] };
-							}
-							return g;
-						}));
-						setLoadingMore(false);
-						break;
-					}
-					case 'new_message': {
-						const { group_id, message } = data;
-						if (message.sender_id === currentUserIdRef.current) return;
-						setGroups(prev => prev.map(g =>
-							g.id === group_id ? { ...g, messages: [...g.messages, message] } : g
-						));
-						break;
-					}
-					default:
-						console.warn('Unhandled action:', data.action);
-				}
-			} catch (e) {
-				console.error('Invalid JSON', e);
-			}
-		};
+  const sendTyping = () => {
+    if (activeId !== null && ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'typing', group_id: activeId, username: currentUser?.username }));
+    }
+  };
 
-		socket.onclose = () => {
-			setStatus('Closed');
-			clearInterval(hbInterval);
-			clearInterval(timerInterval);
-		};
+  const sendMessage = () => {
+    if (activeId === null || !ws || ws.readyState !== WebSocket.OPEN) return;
+    const now = Date.now();
+    const newMsg: Message = { id: now, sender_id: currentUserIdRef.current!, message: input, sent_at: new Date(now).toISOString() };
+    setGroups(prev => prev.map(g => g.id === activeId ? { ...g, messages: [...g.messages, newMsg] } : g));
+    ws.send(JSON.stringify({ action: 'new_message', group_id: activeId, message: input, sent_at: newMsg.sent_at }));
+    setInput('');
+  };
 
-		socket.onerror = () => {
-			setStatus('Error');
-			clearInterval(hbInterval);
-			clearInterval(timerInterval);
-		};
+  const activeGroup = groups.find(g => g.id === activeId) || { name: 'Sélectionnez un groupe', messages: [] };
 
-		return () => {
-			clearInterval(hbInterval);
-			clearInterval(timerInterval);
-			socket.close();
-		};
-	}, []);
+  return (
+    <ThemeContext.Provider value={{ dark, toggle }}>
+      <div className={`${dark ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} flex h-screen`}>        
+        <aside className="w-80 p-6 space-y-8 shadow-lg overflow-y-auto bg-white dark:bg-gray-800">
+          <GroupList groups={groups} activeId={activeId} onSelect={id => { setActiveId(id); setAtBottom(true); }} />
+          <FriendsList friends={friends} />
+        </aside>
 
-	// Send a new message
-	const sendMessage = () => {
-		if (!activeGroupId || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) return;
-		const now = Date.now();
-		const newMsg: Message = {
-			id: now,
-			sender_id: currentUserIdRef.current!,
-			message: input,
-			sent_at: new Date(now).toISOString(),
-		};
-		setGroups(prev => prev.map(g =>
-			g.id === activeGroupId ? { ...g, messages: [...g.messages, newMsg] } : g
-		));
-		socketRef.current.send(JSON.stringify({ action: 'new_message', group_id: activeGroupId, message: input, sent_at: newMsg.sent_at }));
-		setInput('');
-	};
+        <div className="flex-1 flex flex-col min-h-0">          
+          <ChatHeader title={activeGroup.name} status={status} duration={duration} />
 
-	// Load older messages
-	const loadMore = () => {
-		if (!activeGroupId || !socketRef.current) return;
-		const group = groups.find(g => g.id === activeGroupId);
-		if (!group || group.messages.length === 0) return;
-		setLoadingMore(true);
-		const lastId = group.messages[0].id;
-		socketRef.current.send(JSON.stringify({ action: 'loadMoreMessage', group_id: activeGroupId, firstMessageId: lastId }));
-	};
+          <div className="relative flex-1 flex flex-col min-h-0">
+            {hasMoreHistory && (
+              <button
+                onClick={() => loadHistory(activeId!, activeGroup.messages[0]?.id || 0)}
+                disabled={loadingHistory}
+                className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-gray-200 p-2 rounded-full hover:bg-gray-300 z-10"
+              >
+                {loadingHistory ? <Loader2 className="animate-spin" /> : 'Charger anciens'}
+              </button>
+            )}
 
-	const activeGroup = groups.find(g => g.id === activeGroupId) || null;
-	const hasMore = activeGroup ? activeGroup.messages.length >= 20 : false;
+            <MessageList
+              messages={activeGroup.messages}
+              currentUserId={currentUserIdRef.current}
+              isLoading={loadingHistory}
+              onScroll={setAtBottom}
+            />
 
-	return (
-		<div className="flex h-screen bg-gray-50">
-			{/* Sidebar: Groups & Friends */}
-			<aside className="w-80 bg-white p-6 space-y-8 shadow-lg overflow-y-auto">
-				{/* Groups List */}
-				<div>
-					<h2 className="text-2xl font-bold mb-4">My Groups</h2>
-					{groups.length ? (
-						<div className="space-y-3">
-							{groups.map(g => (
-								<div
-									key={g.id}
-									onClick={() => setActiveGroupId(g.id)}
-									className={`p-4 rounded-xl cursor-pointer transition-shadow ${g.id === activeGroupId ? 'bg-blue-600 text-white shadow-xl' : 'bg-white hover:shadow-md'}`}
-								>
-									<span className="font-semibold text-lg truncate">{g.name}</span>
-								</div>
-							))}
-						</div>
-					) : <p className="text-gray-500">No groups available.</p>}
-				</div>
+            {!atBottom && activeGroup.messages.length > 0 && (
+              <button
+                onClick={() => setAtBottom(true)}
+                className="absolute bottom-24 right-4 bg-blue-600 text-white p-2 rounded-full shadow-lg"
+              >
+                Nouveaux messages
+              </button>
+            )}
 
-				{/* Friends Online List */}
-				<div>
-					<h2 className="text-2xl font-bold mb-4">Friends Online</h2>
-					{friendsConnected.length ? (
-						<div className="space-y-3">
-							{friendsConnected.map(u => (
-								<div key={u.id} className="flex items-center p-3 bg-white rounded-xl shadow hover:shadow-md transition-shadow cursor-default">
-									<div className="w-12 h-12 rounded-full p-1 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 mr-4 flex-shrink-0">
-										{u.avatar ? (
-											<img src={u.avatar} alt={u.username} className="w-full h-full rounded-full border-2 border-white object-cover" />
-										) : (
-											<div className="w-full h-full bg-gray-200 rounded-full border-2 border-white flex items-center justify-center text-gray-500 font-semibold">{u.username.charAt(0)}</div>
-										)}
-									</div>
-									<span className="font-medium text-gray-800">{u.username}</span>
-								</div>
-							))}
-						</div>
-					) : <p className="text-gray-500">No friends online.</p>}
-				</div>
-			</aside>
+            {typingUsers.length > 0 && (
+              <div className="absolute bottom-16 left-6 italic text-sm text-gray-500">
+                {typingUsers.join(', ')} écrit...
+              </div>
+            )}
+          </div>
 
-			{/* Chat Area */}
-			<section className="flex-1 flex flex-col">
-				{/* Header */}
-				<header className="bg-white p-4 flex justify-between items-center border-b border-gray-200 shadow-sm">
-					<h2 className="text-2xl font-semibold truncate">{activeGroup ? activeGroup.name : 'Select a group'}</h2>
-					<div className="flex items-center space-x-4">
-						<span className={`px-3 py-1 rounded-full text-sm font-medium ${status === 'Connected' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{status}</span>
-						<span className="text-gray-500">{duration}</span>
-					</div>
-				</header>
-
-				{/* Messages Container */}
-				<div ref={containerRef} className="flex-1 p-6 overflow-y-auto bg-gradient-to-br from-white to-gray-100 relative">
-					{activeGroup && hasMore && (
-						<div className="absolute top-0 left-1/2 transform -translate-x-1/2 mt-2">
-							<button
-								onClick={loadMore}
-								disabled={loadingMore}
-								className="px-4 py-2 bg-gray-200 rounded-full hover:bg-gray-300 transition"
-							>
-								{loadingMore ? 'Loading...' : 'Load older messages'}
-							</button>
-						</div>
-					)}
-
-					<div className="space-y-4 mt-8">
-						{activeGroup ? activeGroup.messages.map(msg => {
-							const isOwn = msg.sender_id === currentUserIdRef.current;
-							const sender = isOwn ? 'You' : activeGroup.members.find(m => m.id === msg.sender_id)?.username;
-							return (
-								<div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-									<div className={`max-w-[65%] p-5 rounded-2xl shadow-lg ${isOwn ? 'bg-blue-500 text-white' : 'bg-white text-gray-800'}`}>
-										<div className="font-semibold mb-2 text-sm opacity-75">{sender}</div>
-										<div className="break-words text-base">{msg.message}</div>
-										<div className="text-xs text-gray-400 text-right mt-2">{new Date(msg.sent_at).toLocaleTimeString()}</div>
-									</div>
-								</div>
-							);
-						}) : <p className="text-center text-gray-400">Please select a group to start chatting.</p>}
-						<div ref={messagesEndRef} />
-					</div>
-				</div>
-
-				{/* Input Area */}
-				{activeGroup && (
-					<div className="bg-white p-4 flex items-center border-t border-gray-200">
-						<input
-							type="text"
-							value={input}
-							onChange={e => setInput(e.target.value)}
-							onKeyDown={e => e.key === 'Enter' && sendMessage()}
-							placeholder="Type your message..."
-							className="flex-1 border border-gray-300 rounded-full px-5 py-3 mr-4 focus:outline-none focus:ring-2 focus:ring-blue-400"
-						/>
-						<button
-							onClick={sendMessage}
-							className="bg-blue-600 p-3 rounded-full shadow-md hover:bg-blue-700 transition-shadow"
-						>
-							<Send size={20} className="text-white" />
-						</button>
-					</div>
-				)}
-			</section>
-		</div>
-	);
+          <MessageInput value={input} onChange={v => { setInput(v); sendTyping(); }} onSend={sendMessage} />
+        </div>
+      </div>
+    </ThemeContext.Provider>
+  );
 }

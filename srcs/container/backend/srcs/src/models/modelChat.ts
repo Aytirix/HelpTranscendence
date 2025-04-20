@@ -1,11 +1,10 @@
-import { skGroup, Message, User } from '@types';
+import { Group, Message, User } from '@types';
 import executeReq from '@models/database';
-import { WebSocketServer, WebSocket } from 'ws';
 import { State } from '@typesChat';
 
-async function getAllGroupsFromUser(userws: WebSocket, state: State) {
-	const query = `SELECT * FROM groups WHERE id IN (SELECT group_id FROM group_users WHERE user_id = ?)`;
-	const groups: any = await executeReq(query, [userws.user.id]);
+async function getAllGroupsFromUser(user: User, state: State) {
+	const query = `SELECT g.*, gu.owner FROM groups AS g JOIN group_users AS gu ON gu.group_id = g.id WHERE gu.user_id = ?`;
+	const groups: any = await executeReq(query, [user.id]);
 	if (groups.length === 0) {
 		return [];
 	}
@@ -13,21 +12,52 @@ async function getAllGroupsFromUser(userws: WebSocket, state: State) {
 	await Promise.all(groups.map(async (group: any) => {
 		const existingGroup = state.groups.find(g => g.id === group.id);
 		if (existingGroup) {
-			existingGroup.members.push(userws);
+			if (!existingGroup.members.some((member: User) => member.id === user.id)) {
+				existingGroup.members.push(user);
+			}
+			if (!existingGroup.onlines_id.includes(user.id)) {
+				existingGroup.onlines_id.push(user.id);
+			}
+			if (group.owner === 1 && !existingGroup.owners_id.includes(user.id)) {
+				existingGroup.owners_id.push(user.id);
+			}
 		} else {
-			let grp = {
+			let grp: Group = {
 				id: group.id,
 				name: group.name,
-				members: [userws],
+				members: [],
+				owners_id: user.id === group.owner ? [user.id] : [],
+				onlines_id: [user.id],
 				messages: []
 			};
-			grp.messages = await getMessagesFromGroup(grp);
+			await getAllUserFromGroup(grp);
 			state.groups.push(grp);
 		}
 	}));
 }
 
-async function getMessagesFromGroup(group: skGroup, limit: number = 20) {
+async function getAllUserFromGroup(group: Group) {
+	const query = `SELECT u.id, u.email, u.username, u.lang, u.avatar, gu.owner FROM users AS u JOIN group_users AS gu ON gu.user_id = u.id WHERE gu.group_id = ?`;
+	const users: any = await executeReq(query, [group.id]);
+	if (users.length === 0) {
+		return [];
+	}
+	group.owners_id = [];
+	group.members = users.map((user: any) => {
+		if (user.owner === 1 && !group.owners_id.includes(user.id)) {
+			group.owners_id.push(user.id);
+		}
+		return {
+			id: user.id,
+			email: user.email,
+			username: user.username,
+			lang: user.lang,
+			avatar: user.avatar,
+		};
+	});
+}
+
+async function getMessagesFromGroup(group: Group, limit: number = 20) {
 	const firstMessageId = group.messages.length > 0 ? group.messages[0].id : null;
 
 	const sql = `
@@ -67,10 +97,9 @@ async function getMessagesFromGroup(group: skGroup, limit: number = 20) {
 }
 
 
-async function newMessage(group: skGroup, user: User, message: string, sent_at: Date) {
+async function newMessage(group: Group, user: User, message: string, sent_at: Date) {
 	const query = `INSERT group_messages (group_id, sender_id, message, sent_at) VALUES (?, ?, ?, ?)`;
 	let sentAtTimestamp = sent_at.getTime();
-	console.log(sentAtTimestamp);
 	const result: any = await executeReq(query, [group.id, user.id, message, sentAtTimestamp]);
 
 	if (result.affectedRows === 0) {

@@ -21,6 +21,7 @@ services:
       - backend_data:${BACKEND_PATH}
       - frontend_data:${FRONTEND_PATH}
       - shared:/etc/nginx/ssl
+      - build_data:/var/www/html/frontend
     restart: always
     networks:
       - iron_network
@@ -48,6 +49,7 @@ services:
       - NODE_PROJET=${NODE_PROJET}
     volumes:
       - frontend_data:${FRONTEND_PATH}
+      - build_data:/var/www/html/frontend
     working_dir: ${FRONTEND_PATH}
     restart: on-failure
     networks:
@@ -71,6 +73,12 @@ volumes:
     driver_opts:
       type: none
       device: ${FRONTEND_PATH}
+      o: bind
+  build_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${BUILD_PATH}
       o: bind
 
 networks:

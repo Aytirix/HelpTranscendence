@@ -7,6 +7,7 @@ import { FastifyInstance } from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import Middleware from '@Middleware';
 import chatWebSocket from './chat/wsChat';
+import { User } from '@types';
 
 let wss: WebSocketServer | null = null;
 
@@ -15,12 +16,12 @@ async function initWebSocket(server: FastifyInstance) {
 
 	wss = new WebSocketServer({ noServer: true, perMessageDeflate: false, clientTracking: true });
 
-	wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+	wss.on('connection', (ws: WebSocket, user: User, req: IncomingMessage) => {
 		const path = req.url;
 
 		switch (path) {
 			case '/chat':
-				chatWebSocket(wss, ws, req);
+				chatWebSocket(wss, ws, user, req);
 				break;
 			default:
 				const errorMsg = 'Erreur : chemin WebSocket non reconnu.';
@@ -34,7 +35,6 @@ async function initWebSocket(server: FastifyInstance) {
 	server.server.on('upgrade', async (request: IncomingMessage, socket: Socket, head: Buffer) => {
 		try {
 			const session = await Middleware.getSessionByCookie(request);
-
 			if (!session || !session.user) {
 				socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
 				socket.destroy();
@@ -42,8 +42,7 @@ async function initWebSocket(server: FastifyInstance) {
 			}
 
 			wss?.handleUpgrade(request, socket, head, (ws: WebSocket) => {
-				ws.user = session.user;
-				wss?.emit('connection', ws, request);
+				wss?.emit('connection', ws, session.user, request);
 			});
 		} catch (err) {
 			console.error('Erreur lors de la gestion de la connexion WebSocket:', err);
