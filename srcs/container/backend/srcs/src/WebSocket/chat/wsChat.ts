@@ -1,16 +1,16 @@
 import { Friends, Group, User } from '@types';
-import { State, reponse, req_loadMoreMessage, req_newMessage, res_pong } from '@typesChat';
+import { State, request, req_loadMoreMessage, req_newMessage, res_pong } from '@typesChat';
 import { IncomingMessage } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
-import modelsChat from '@models/modelChat';
 import modelsFriends from '@models/modelFriends';
 import controllersChat, { removeOnlineUser } from '@controllers/controllerChat';
 import controllerFriends from '@controllers/controllerFriends';
+import { mapToObject } from '@tools';
 
 const state: State = {
 	user: new Map<number, User>(),
 	onlineSockets: new Map<number, WebSocket>(),
-	groups: [] as Group[],
+	groups: new Map<number, Group>(),
 	friends: [] as Friends[],
 	friendsByUser: new Map<number, number[]>(),
 };
@@ -23,7 +23,7 @@ const state: State = {
 async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, req: IncomingMessage): Promise<void> {
 	controllersChat.init_connexion(ws, user, state);
 	ws.on('message', (message: Buffer) => {
-		let text: reponse | null = null;
+		let text: request | null = null;
 		try {
 			text = JSON.parse(message.toString().trim());
 		} catch (e) {
@@ -54,13 +54,14 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 				ws.send(/**1008,**/ 'Action non reconnue'); // to close
 				break;
 		}
+
 		ws.send(JSON.stringify({
 			action: 'state',
 			state: {
-				groups: state.groups,
+				groups: mapToObject(state.groups),
 				friends: state.friends,
-				friendsByUser: state.friendsByUser,
-				users_connected: state.user,
+				friendsByUser: mapToObject(state.friendsByUser),
+				users_connected: mapToObject(state.user),
 				user: user,
 				lenOnlineSockets: state.onlineSockets.size,
 			}

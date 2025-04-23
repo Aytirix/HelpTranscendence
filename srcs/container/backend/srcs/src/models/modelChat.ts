@@ -10,7 +10,7 @@ async function getAllGroupsFromUser(user: User, state: State) {
 	}
 
 	await Promise.all(groups.map(async (group: any) => {
-		const existingGroup = state.groups.find(g => g.id === group.id);
+		const existingGroup = state.groups.get(group.id);
 		if (existingGroup) {
 			if (!existingGroup.members.some((member: User) => member.id === user.id)) {
 				existingGroup.members.push(user);
@@ -32,7 +32,7 @@ async function getAllGroupsFromUser(user: User, state: State) {
 				private: group.private,
 			};
 			await getAllUserFromGroup(grp);
-			state.groups.push(grp);
+			state.groups.set(grp.id, grp);
 		}
 	}));
 }
