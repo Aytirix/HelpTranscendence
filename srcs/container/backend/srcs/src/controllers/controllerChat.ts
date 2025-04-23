@@ -32,7 +32,6 @@ export function groupExists(ws: WebSocket, state: State, group_id: number): Grou
 export function userInGroup(ws: WebSocket, user: User, group: Group): boolean {
 	const res: boolean = group.members.some((member: User) => member.id === user.id);
 	if (!res) {
-		console.log(`L'utilisateur ${user.id} n'est pas membre du groupe ${group.id}`);
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Vous n\'êtes pas membre de ce groupe'] } as reponse));
 		return false;
 	}
@@ -45,8 +44,6 @@ export function broadcastAllGroupUsers(user: User, state: State, group: Group, t
 		const members = group.members.filter(member => member.id !== user.id);
 		members.forEach(member => {
 			const wsMember = state.onlineSockets.get(member.id);
-			console.log(`Envoi a l'utilisateur ${member.id} le message : ${text}`);
-			console.log(`wsMember : ${(wsMember)} && wsMember.readyState : ${wsMember?.readyState === WebSocket.OPEN} && send.indexOf(member.id) : ${send.indexOf(member.id)}`);
 			if (wsMember && wsMember.readyState === WebSocket.OPEN && send.indexOf(member.id) === -1) {
 				send.push(member.id);
 				wsMember.send(text as string);
