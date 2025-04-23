@@ -28,7 +28,8 @@ async function getAllGroupsFromUser(user: User, state: State) {
 				members: [],
 				owners_id: user.id === group.owner ? [user.id] : [],
 				onlines_id: [user.id],
-				messages: []
+				messages: [],
+				private: group.private,
 			};
 			await getAllUserFromGroup(grp);
 			state.groups.push(grp);

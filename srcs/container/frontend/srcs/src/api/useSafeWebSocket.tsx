@@ -15,7 +15,6 @@ function useSafeWebSocket({ endpoint, onMessage, onStatusChange, reconnectDelay 
 	const [status, setStatus] = useState<'Connecting...' | 'Connected' | 'Closed' | 'Error' | 'Reconnecting'>('Connecting...');
 	const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
-	const DiffTimeClientServer = useRef<number>(0);
 	const reconnectAttemptsRef = useRef(0);
 	const isManuallyClosed = useRef(false);
 
@@ -34,22 +33,15 @@ function useSafeWebSocket({ endpoint, onMessage, onStatusChange, reconnectDelay 
 			setStatus('Connected');
 			onStatusChange?.('Connected');
 			heartbeatRef.current = setInterval(() => {
-				socket.readyState === WebSocket.OPEN && socket.send(JSON.stringify({ action: 'ping' }));
+				if (socket.readyState === WebSocket.OPEN) {
+					socket.send(JSON.stringify({ action: 'ping' }));
+				}
 			}, 50000);
-			socket.send(JSON.stringify({ action: 'ping' }));
 		};
 
 		socket.onmessage = (evt) => {
 			try {
 				const data = JSON.parse(evt.data);
-				if (data.action === 'pong') {
-					const now = data.server_time ? new Date(data.server_time).getTime() : Date.now();
-					const serverTime = new Date(now).getTime();
-					const clientTime = Date.now();
-					DiffTimeClientServer.current = serverTime - clientTime;
-					console.log('DiffTimeClientServer', DiffTimeClientServer.current);
-					return;
-				}
 				onMessage(data);
 			} catch {
 				console.error('WS parse error');

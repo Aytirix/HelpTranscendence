@@ -6,12 +6,7 @@ RUN apk update && apk add --no-cache \
     bash \
     curl \
     zsh \
-    tzdata \
     && rm -rf /var/cache/apk/*
-
-# Configurer le fuseau horaire sur Europe/Paris
-RUN ln -snf /usr/share/zoneinfo/Europe/Paris /etc/localtime && \
-    echo "Europe/Paris" > /etc/timezone
 
 # Variables d'environnement
 ARG NODE_PROJET

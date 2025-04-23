@@ -8,6 +8,8 @@ export interface User {
 	lang: string;
 	google_token?: string;
 	avatar?: string;
+	privmsg_id?: number;
+	online?: boolean;
 }
 
 export interface Message {
@@ -24,6 +26,7 @@ export interface Group {
 	owners_id: number[];
 	onlines_id: number[];
 	messages: Message[];
+	private: boolean;
 }
 
 export interface Friends {
@@ -31,5 +34,6 @@ export interface Friends {
 	user_one_id: number;
 	user_two_id: number;
 	target: string;
-	status: 'friend' |'blocked' | 'pending';
+	groupe_priv_msg_id: number;
+	status: 'friend' | 'blocked' | 'pending';
 }

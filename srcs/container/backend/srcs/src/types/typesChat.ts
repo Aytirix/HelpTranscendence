@@ -21,7 +21,7 @@ export interface send_init_connected {
 	action: 'init_connected';
 	user: User;
 	groups: Group[];
-	friends_connected: User[];
+	friends: User[];
 }
 
 //  l'api attend cette reponse pour un nouveau message
@@ -29,7 +29,6 @@ export interface req_newMessage {
 	action: string;
 	group_id: number;
 	message: string;
-	sent_at: Date;
 }
 
 // Envoyer le message a toutes les personnes de la conversation
@@ -56,7 +55,7 @@ export interface res_loadMoreMessage {
 // Reponse : Envoyer le message que x c'est connecté a tous ces amis
 export interface send_friend_connected {
 	action: 'friend_connected';
-	user: User;
+	userId: number;
 }
 
 // Reponse : Envoyer le message que x c'est deconnecté a tous ces amis
@@ -71,5 +70,4 @@ export interface req_ping {
 
 export interface res_pong {
 	action: 'pong';
-	server_time: number;
 }

@@ -6,11 +6,10 @@ RUN apt-get update && apt-get install -y \
     zsh \
     net-tools \
     bash \
-    tzdata \
-	psmisc \
     && rm -rf /var/lib/apt/lists/*
 
-RUN ln -fs /usr/share/zoneinfo/Europe/Paris /etc/localtime && dpkg-reconfigure -f noninteractive tzdata
+RUN ln -snf /usr/share/zoneinfo/Europe/Paris /etc/localtime && \
+    echo "Europe/Paris" > /etc/timezone
 
 RUN mkdir -p /var/lib/sqlite && touch /var/lib/sqlite/db.sqlite
 

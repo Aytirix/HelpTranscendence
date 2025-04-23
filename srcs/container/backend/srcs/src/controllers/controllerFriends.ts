@@ -14,12 +14,17 @@ export function getConnectedFriends(userId: number, state: State): User[] {
 		.filter(user => state.onlineSockets.has(user.id));
 }
 
-export function getFriends(userId: number, state: State): User[] {
-	const friendsIds = state.friendsByUser.get(userId) || [];
+export async function getFriends(userId: number, state: State): Promise<User[]> {
+	const friendsIds = await modelsFriends.getFriendsForUser(userId, state);
 
-	return friendsIds
-		.map(friendId => state.user.get(friendId))
-		.filter((user): user is User => user !== undefined);
+	if (friendsIds.length === 0) return [];
+
+	// add is connected
+	for (const friend of friendsIds) {
+		if (state.onlineSockets.has(friend.id)) {friend.online = true;}
+		else {friend.online = false;}
+	}
+	return friendsIds;
 }
 
 function buildFriendsMap(friends: Friends[]): Map<number, number[]> {
@@ -37,7 +42,6 @@ function buildFriendsMap(friends: Friends[]): Map<number, number[]> {
 
 	return map;
 }
-
 
 export default {
 	getConnectedFriends,

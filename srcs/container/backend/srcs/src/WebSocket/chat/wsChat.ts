@@ -21,29 +21,26 @@ const state: State = {
 })();
 
 async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, req: IncomingMessage): Promise<void> {
-	controllersChat.init_connexion(ws, user, req, state);
+	controllersChat.init_connexion(ws, user, state);
 	ws.on('message', (message: Buffer) => {
-		var text: reponse | null = null;
+		let text: reponse | null = null;
 		try {
 			text = JSON.parse(message.toString().trim());
 		} catch (e) {
-			ws.send(/**1008,**/ 'Veuillez envoyer un message au format JSON');
-			return;
+			ws.send(/**1008,**/ 'Veuillez envoyer un message au format JSON'); // to close
+			return true;
 		}
 
 		const action = text.action;
 		if (!action) {
-			ws.send('Veuillez spécifier une action');
-			return;
+			ws.send('Veuillez spécifier une action'); // to close
+			return true;
 		}
-
-		console.log('Message reçu:', message.toString().trim());
 
 		switch (action) {
 			case 'ping':
 				const pong: res_pong = {
-					action: 'pong',
-					server_time: Date.now(),
+					action: 'pong'
 				};
 				ws.send(JSON.stringify(pong));
 				break;
@@ -54,7 +51,7 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 				controllersChat.loadMoreMessage(ws, user, state, (text as req_loadMoreMessage));
 				break;
 			default:
-				ws.send(/**1008,**/ 'Action non reconnue');
+				ws.send(/**1008,**/ 'Action non reconnue'); // to close
 				break;
 		}
 		ws.send(JSON.stringify({
@@ -63,8 +60,9 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 				groups: state.groups,
 				friends: state.friends,
 				friendsByUser: state.friendsByUser,
-				friends_connected: state.user,
+				users_connected: state.user,
 				user: user,
+				lenOnlineSockets: state.onlineSockets.size,
 			}
 		}));
 	});

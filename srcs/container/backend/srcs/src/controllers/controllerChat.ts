@@ -38,29 +38,42 @@ export function userInGroup(ws: WebSocket, user: User, group: Group): boolean {
 }
 
 export const addOnlineUser = (state: State, ws: WebSocket, user: User) => {
-	state.user.set(user.id, user);
+	if (!state.user.has(user.id)) {
+		state.user.set(user.id, user);
+	}
 	state.onlineSockets.set(user.id, ws);
 };
 
 export const removeOnlineUser = (state: State, user: User) => {
 	state.user.delete(user.id);
 	state.onlineSockets.delete(user.id);
+
+	// Parcourir la liste des utilisateurs connectés et verifier si'il ont un lien avec un utilisateur encore connecté, si non, on le supprime
+	state.user.forEach((user: User) => {
+		const friendsIds = state.friendsByUser.get(user.id) || [];
+		const hasFriendConnected = friendsIds.some(friendId => state.onlineSockets.has(friendId));
+		if (!hasFriendConnected) {
+			state.user.delete(user.id);
+			state.onlineSockets.delete(user.id);
+		}
+	}
+	);
 };
 
-export const init_connexion = async (ws: WebSocket, user: User, req: IncomingMessage, state: State) => {
+export const init_connexion = async (ws: WebSocket, user: User, state: State) => {
 	console.log('Nouvelle connexion de l\'utilisateur:', user.id);
 	addOnlineUser(state, ws, user);
 	await modelsChat.getAllGroupsFromUser(user, state);
 
 	// Envoi de l'information de connexion à tous les amis connectés
-	const friendsConnected = controllerFriends.getConnectedFriends(user.id, state);
+	const friends = await controllerFriends.getFriends(user.id, state);
 
-	friendsConnected.forEach((friend: User) => {
+	friends.forEach((friend: User) => {
 		const userws = state.onlineSockets.get(friend.id);
 		if (!userws) return;
 		const send: send_friend_connected = {
 			action: 'friend_connected',
-			user: user,
+			userId: user.id,
 		};
 		userws.send(JSON.stringify(send));
 	});
@@ -77,8 +90,9 @@ export const init_connexion = async (ws: WebSocket, user: User, req: IncomingMes
 				owners_id: group.owners_id,
 				onlines_id: group.onlines_id,
 				messages: group.messages.slice(-20),
+				private: group.private,
 			})),
-		friends_connected: friendsConnected,
+		friends: friends,
 	};
 	ws.send(JSON.stringify(send));
 };
@@ -103,6 +117,7 @@ export const user_disconnected = async (ws: WebSocket, user: User, state: State)
 
 
 export const newMessage = async (ws: WebSocket, user: User, state: State, req: req_newMessage) => {
+	const sentAtDate = new Date();
 	const group = groupExists(ws, state, req.group_id);
 	if (!group) return;
 
@@ -114,22 +129,8 @@ export const newMessage = async (ws: WebSocket, user: User, state: State, req: r
 		return;
 	}
 
-	if (!req.sent_at) {
-		ws.send(JSON.stringify({ action: 'error', message: 'Date d\'envoi manquante' }));
-		return;
-	}
-
 	if (req.message.length > 1000) {
 		ws.send(JSON.stringify({ action: 'error', message: 'Message trop long' }));
-		return;
-	}
-
-	//Si la difference entre la date d'envoi et la date actuelle est superieur a 1 saeconde
-	const currentDate = new Date();
-	const sentAtDate = new Date(req.sent_at);
-	const diff = Math.abs(currentDate.getTime() - sentAtDate.getTime());
-	if (diff > 500) {
-		ws.send(JSON.stringify({ action: 'error', message: `Date d\'envoi invalide, différence de ${diff}ms` }));
 		return;
 	}
 
