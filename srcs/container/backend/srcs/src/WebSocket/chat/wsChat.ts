@@ -50,6 +50,26 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 			case 'loadMoreMessage':
 				controllersChat.loadMoreMessage(ws, user, state, (text as req_loadMoreMessage));
 				break;
+			case 'create_group':
+				break;
+			case 'add_user_to_group':
+				break;
+			case 'remove_user_from_group':
+				break;
+			case 'delete_group':
+				break;
+			case 'add_friend':
+				break;
+			case 'remove_friend':
+				break;
+			case 'accept_friend':
+				break;
+			case 'refuse_friend':
+				break;
+			case 'block_user':
+				break;
+			case 'unblock_user':
+				break;
 			default:
 				ws.send(/**1008,**/ 'Action non reconnue'); // to close
 				break;
