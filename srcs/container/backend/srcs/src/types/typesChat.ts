@@ -69,6 +69,19 @@ export interface res_disconnect {
 	user_id: number;
 }
 
+// Request pour accepter une demande d'ami
+export interface req_accept_friend {
+	action: 'accept_friend';
+	user_id: number;
+}
+
+// Reponse : Envoyer le message que x a accepté la demande d'ami a tous ces amis
+export interface res_accept_friend extends reponse {
+	action: 'accept_friend';
+	user?: User;
+	group?: Group;
+}
+
 export interface req_ping {
 	action: 'ping';
 }

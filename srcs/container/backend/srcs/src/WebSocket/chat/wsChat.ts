@@ -1,5 +1,5 @@
 import { Friends, Group, User } from '@types';
-import { State, request, req_loadMoreMessage, req_newMessage, res_pong } from '@typesChat';
+import { State, request, req_loadMoreMessage, req_newMessage, res_pong, req_accept_friend } from '@typesChat';
 import { IncomingMessage } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import modelsFriends from '@models/modelFriends';
@@ -63,6 +63,7 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 			case 'remove_friend':
 				break;
 			case 'accept_friend':
+				controllerFriends.acceptFriendRequest(ws, user, state, (text as req_accept_friend));
 				break;
 			case 'refuse_friend':
 				break;

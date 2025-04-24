@@ -116,8 +116,53 @@ async function newMessage(group: Group, user: User, message: string, sent_at: Da
 	return res;
 }
 
+async function createPrivateGroup(user: User, friend: User, state: State): Promise<Group | null> {
+	const query = `SELECT * FROM groups WHERE private = 1 AND id IN (SELECT group_id FROM group_users WHERE user_id IN (?, ?))`;
+	const result: any = await executeReq(query, [user.id, friend.id]);
+	if (result.length > 0) {
+		const group = result[0];
+		const groupId = group.id;
+		const group2: Group = {
+			id: group.id,
+			name: group.name || '',
+			members: [user, friend],
+			owners_id: [user.id, friend.id],
+			onlines_id: [user.id, ...(friend.online ? [friend.id] : [])],
+			messages: [],
+			private: true,
+		};
+		state.groups.set(groupId, group2);
+		return group2;
+	}
+
+	
+	const query2 = `INSERT INTO groups (private) VALUES (1)`;
+	const result2: any = await executeReq(query2);
+	if (result2.affectedRows === 0) {
+		return null;
+	}
+	const groupId = result2.insertId;
+	const query3 = `INSERT INTO group_users (group_id, user_id, owner) VALUES (?, ?, 1), (?, ?, 1)`;
+	const result3: any = await executeReq(query3, [groupId, user.id, groupId, friend.id]);
+	if (result3.affectedRows === 0) {
+		return null;
+	}
+	const group: Group = {
+		id: groupId,
+		name: '',
+		members: [user, friend],
+		owners_id: [user.id, friend.id],
+		onlines_id: [user.id, ...(friend.online ? [friend.id] : [])],
+		messages: [],
+		private: true,
+	};
+	state.groups.set(groupId, group);
+	return group;
+}
+
 export default {
 	getAllGroupsFromUser,
 	getMessagesFromGroup,
 	newMessage,
+	createPrivateGroup,
 }

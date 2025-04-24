@@ -10,6 +10,11 @@ export interface User {
 	avatar?: string;
 	privmsg_id?: number;
 	online?: boolean;
+	relation?: {
+		status: 'friend' | 'blocked' | 'pending';
+		target: number;
+		privmsg_id?: number;
+	}
 }
 
 export interface Message {
@@ -33,7 +38,7 @@ export interface Friends {
 	id: number;
 	user_one_id: number;
 	user_two_id: number;
-	target: string;
+	target: number;
 	groupe_priv_msg_id: number;
 	status: 'friend' | 'blocked' | 'pending';
 }

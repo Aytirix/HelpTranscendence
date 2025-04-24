@@ -1,3 +1,4 @@
+// src/components/WebSocketChat.tsx
 import React, {
 	useState,
 	useEffect,
@@ -11,27 +12,32 @@ import { format, isToday, isYesterday } from 'date-fns';
 import useSafeWebSocket from '../api/useSafeWebSocket';
 
 // === Theme Context ===
-const ThemeContext = createContext<{
-	dark: boolean;
-	toggle: () => void;
-}>({ dark: false, toggle: () => { } });
+const ThemeContext = createContext<{ dark: boolean; toggle: () => void }>({
+	dark: false,
+	toggle: () => { },
+});
 const useTheme = () => useContext(ThemeContext);
 
 // Pagination constant
 const PAGE_SIZE = 20;
 
-type FriendStatus = 'accepted' | 'request_sent' | 'received' | 'blocked';
-type Message = { id: number; sender_id: number; message: string; sent_at: string };
+type RelationStatus = 'friend' | 'blocked' | 'pending';
+
 type User = {
 	id: number;
 	username: string;
 	email: string;
 	avatar: string | null;
 	lang: string;
-	friendStatus: FriendStatus;
-	privmsg_id?: number;      // reçu à l'init
-	online?: boolean;         // reçu à l'init
+	relation?: {
+		status: RelationStatus;
+		target: number;
+		privmsg_id?: number;
+	};
+	online?: boolean;
 };
+
+type Message = { id: number; sender_id: number; message: string; sent_at: string };
 type Group = {
 	id: number;
 	name: string;
@@ -61,7 +67,6 @@ const Avatar: React.FC<{ src: string | null; alt: string }> = ({ src, alt }) =>
 		</div>
 	);
 
-// on affiche PRIVATE chats avec le nom de l'autre user
 const GroupList: React.FC<{
 	groups: Group[];
 	activeId: number | null;
@@ -72,7 +77,6 @@ const GroupList: React.FC<{
 		<h2 className="text-xl font-bold mb-3">Mes discussions</h2>
 		{groups.length > 0 ? (
 			groups.map((g) => {
-				// si privé, trouver l'autre user
 				let label = g.name;
 				if (g.private === 1 && currentUserId != null) {
 					const other = g.members.find((m) => m.id !== currentUserId);
@@ -82,9 +86,7 @@ const GroupList: React.FC<{
 					<button
 						key={g.id}
 						onClick={() => onSelect(g.id)}
-						className={`w-full text-left p-3 rounded-lg mb-2 transition-shadow ${g.id === activeId
-								? 'bg-blue-600 text-white shadow-lg'
-								: 'bg-white hover:shadow-md'
+						className={`w-full text-left p-3 rounded-lg mb-2 transition-shadow ${g.id === activeId ? 'bg-blue-600 text-white shadow-lg' : 'bg-white hover:shadow-md'
 							}`}
 					>
 						<span className="font-medium">{label}</span>
@@ -100,38 +102,101 @@ const GroupList: React.FC<{
 
 const FriendsList: React.FC<{
 	friends: User[];
+	currentUserId: number | null;
 	onAction: (user: User, action: string) => void;
-}> = ({ friends, onAction }) => (
+}> = ({ friends, currentUserId, onAction }) => (
 	<div>
 		<h2 className="text-xl font-bold mb-3">Liste d'amis</h2>
 		{friends.length > 0 ? (
-			friends.map((u) => (
-				<div key={u.id} className="flex items-center justify-between mb-4">
-					<div className="flex items-center">
-						<Avatar src={u.avatar} alt={u.username} />
-						<span className="ml-3 font-medium">{u.username}</span>
-					</div>
-					<div className="flex space-x-2">
-						{u.friendStatus === 'accepted' && (
+			friends.map((u) => {
+				const rel = u.relation;
+				let buttons: ReactNode = null;
+
+				if (rel) {
+					if (rel.status === 'pending' && rel.target !== currentUserId) {
+						// J'ai envoyé la demande
+						buttons = (
+							<button
+								onClick={() => onAction(u, 'cancel_request')}
+								className="px-3 py-1 bg-yellow-500 text-white rounded"
+							>
+								Annuler la demande
+							</button>
+						);
+					} else if (rel.status === 'pending' && rel.target === currentUserId) {
+						// Je suis la cible
+						buttons = (
+							<>
+								<button
+									onClick={() => onAction(u, 'accept_friend')}
+									className="px-3 py-1 bg-green-500 text-white rounded mr-2"
+								>
+									Accepter
+								</button>
+								<button
+									onClick={() => onAction(u, 'refuse_friend')}
+									className="px-3 py-1 bg-red-500 text-white rounded"
+								>
+									Refuser
+								</button>
+							</>
+						);
+					} else if (rel.status === 'friend') {
+						buttons = (
 							<>
 								<button
 									onClick={() => onAction(u, 'message')}
-									className="px-3 py-1 bg-blue-500 text-white rounded"
+									className="px-3 py-1 bg-blue-500 text-white rounded mr-2"
 								>
 									Message
 								</button>
 								<button
-									onClick={() => onAction(u, 'block')}
+									onClick={() => onAction(u, 'remove_friend')}
 									className="px-3 py-1 bg-red-500 text-white rounded"
 								>
-									Bloquer
+									Retirer
 								</button>
 							</>
-						)}
-						{/* autres états… */}
+						);
+					} else if (rel.status === 'blocked' && rel.target !== currentUserId) {
+						buttons = (
+							<button
+								onClick={() => onAction(u, 'unblock')}
+								className="px-3 py-1 bg-green-500 text-white rounded"
+							>
+								Débloquer
+							</button>
+						);
+					}
+				} else {
+					buttons = (
+						<>
+							<button
+								onClick={() => onAction(u, 'send_request')}
+								className="px-3 py-1 bg-blue-500 text-white rounded mr-2"
+							>
+								Ajouter
+							</button>
+							<button
+								onClick={() => onAction(u, 'block')}
+								className="px-3 py-1 bg-red-500 text-white rounded"
+							>
+								Bloquer
+							</button>
+						</>
+					);
+				}
+
+				return (
+					<div key={u.id} className="flex items-center justify-between mb-4">
+						<div className="flex items-center">
+							<Avatar src={u.avatar} alt={u.username} />
+							<span className="ml-3 font-medium">{u.username}</span>
+						</div>
+						<div className="flex space-x-2">{buttons}</div>
 					</div>
-				</div>
-			))
+				);
+			})
 		) : (
 			<p className="text-gray-500">Aucun ami</p>
 		)}
@@ -185,7 +250,6 @@ const MessageList: React.FC<{
 	onScroll: (atBottom: boolean) => void;
 }> = ({ messages, currentUserId, isLoading, onScroll }) => {
 	const containerRef = useRef<HTMLDivElement>(null);
-
 	const grouped = React.useMemo(() => {
 		return messages.reduce((acc: Record<string, Message[]>, msg) => {
 			const date = new Date(msg.sent_at);
@@ -251,25 +315,23 @@ const MessageInput: React.FC<{
 			placeholder="Tapez un message..."
 			className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
 			aria-label="Message input"
+			onKeyDown={(e) => {
+				if (e.key === 'Enter') onSend();
+			}}
 		/>
-		<button
-			onClick={onSend}
-			disabled={!value.trim()}
-			className="p-2 rounded-full bg-blue-600 text-white disabled:opacity-50"
-		>
+		<button onClick={onSend} disabled={!value.trim()} className="p-2 rounded-full bg-blue-600 text-white disabled:opacity-50">
 			<Send />
 		</button>
 	</div>
 );
 
-// === Main component ===
 export default function WebSocketChat() {
 	const [dark, setDark] = useState(false);
 	const toggle = () => setDark((p) => !p);
 
-	const [status, setStatus] = useState<
-		'Connecting...' | 'Connected' | 'Closed' | 'Error' | 'Reconnecting'
-	>('Connecting...');
+	const [status, setStatus] = useState<'Connecting...' | 'Connected' | 'Closed' | 'Error' | 'Reconnecting'>(
+		'Connecting...'
+	);
 	const [currentUser, setCurrentUser] = useState<User | null>(null);
 	const [friends, setFriends] = useState<User[]>([]);
 	const [groups, setGroups] = useState<Group[]>([]);
@@ -283,7 +345,7 @@ export default function WebSocketChat() {
 	const startRef = useRef(Date.now());
 	const currentUserIdRef = useRef<number | null>(null);
 
-	// Timer
+	// Timer for duration
 	useEffect(() => {
 		const iv = setInterval(() => {
 			const diff = Date.now() - startRef.current;
@@ -295,38 +357,28 @@ export default function WebSocketChat() {
 		return () => clearInterval(iv);
 	}, []);
 
+	// Load more history
 	const loadHistory = (groupId: number, firstMessageId: number) => {
 		if (!ws || ws.readyState !== WebSocket.OPEN) return;
 		setLoadingHistory(true);
-		ws.send(
-			JSON.stringify({ action: 'loadMoreMessage', group_id: groupId, firstMessageId })
-		);
+		ws.send(JSON.stringify({ action: 'loadMoreMessage', group_id: groupId, firstMessageId }));
 	};
 
+	// Handle incoming messages/actions
 	const handleMessage = (data: any) => {
 		switch (data.action) {
 			case 'init_connected': {
-				// 1) transformer en array
 				const rawGroups = data.groups;
-				const groupsArr: any[] = Array.isArray(rawGroups)
-					? rawGroups
-					: Object.values(rawGroups);
-
-				// 2) currentUser + ref
+				const groupsArr: any[] = Array.isArray(rawGroups) ? rawGroups : Object.values(rawGroups);
 				setCurrentUser(data.user);
 				currentUserIdRef.current = data.user.id;
-
-				// 3) friends avec privmsg_id + online
 				setFriends(
 					data.friends.map((u: any) => ({
 						...u,
-						friendStatus: 'accepted' as FriendStatus,
-						privmsg_id: u.privmsg_id,
+						relation: u.relation ? { ...u.relation } : undefined,
 						online: u.online,
 					}))
 				);
-
-				// 4) groupes intialisés
 				setGroups(
 					groupsArr.map((g: any) => ({
 						id: g.id,
@@ -338,79 +390,49 @@ export default function WebSocketChat() {
 						private: g.private,
 					}))
 				);
-
-				// 5) sélection + load history
 				if (groupsArr.length > 0) {
 					setActiveId(groupsArr[0].id);
 					loadHistory(groupsArr[0].id, 0);
 				}
 				break;
 			}
-
 			case 'loadMoreMessage': {
 				const { group_id, messages } = data;
 				setGroups((prev) =>
-					prev.map((g) =>
-						g.id === group_id
-							? { ...g, messages: [...messages, ...g.messages] }
-							: g
-					)
+					prev.map((g) => (g.id === group_id ? { ...g, messages: [...messages, ...g.messages] } : g))
 				);
 				setLoadingHistory(false);
 				setHasMoreHistory(messages.length === PAGE_SIZE);
 				break;
 			}
-
 			case 'new_message': {
 				const { group_id, message } = data;
 				if (message.sender_id === currentUserIdRef.current) return;
 				setGroups((prev) =>
-					prev.map((g) =>
-						g.id === group_id
-							? { ...g, messages: [...g.messages, message] }
-							: g
-					)
+					prev.map((g) => (g.id === group_id ? { ...g, messages: [...g.messages, message] } : g))
 				);
 				break;
 			}
-
-
-			case 'friend_connected': {
-				const id = data.userId;
-				const u = data.friends.find((u: any) => u.id === id);
-				if (!u) return;
-				setFriends((prev) => [
-					...prev,
-					{ ...u, friendStatus: 'accepted' as FriendStatus },
-				]);
+			case 'friend_request':
+			case 'cancel_request':
+			case 'accept_friend':
+			case 'refuse_friend':
+			case 'remove_friend':
+			case 'block_user':
+			case 'unblock_user': {
+				// Backend renvoie toujours liste à jour
+				setFriends(data.friends.map((u: any) => ({
+					...u,
+					relation: u.relation ? { ...u.relation } : undefined,
+					online: u.online,
+				})));
 				break;
 			}
-
-			case 'user_disconnected': {
-				setFriends((prev) => prev.filter((u) => u.id !== data.user));
-				break;
-			}
-
-			case 'loadMoreMessage': {
-				const { group_id, messages } = data;
-				setGroups((prev) =>
-					prev.map((g) =>
-						g.id === group_id
-							? { ...g, messages: [...messages, ...g.messages] }
-							: g
-					)
-				);
-				setLoadingHistory(false);
-				setHasMoreHistory(messages.length === PAGE_SIZE);
-				break;
-			}
-
 			default:
 				break;
 		}
 	};
 
-	// ouverture du WS
 	const { socket: ws } = useSafeWebSocket({
 		endpoint: '/chat',
 		onMessage: handleMessage,
@@ -418,12 +440,12 @@ export default function WebSocketChat() {
 		reconnectDelay: 3000,
 	});
 
-	// statut WS
+	// Update status label
 	useEffect(() => {
 		setStatus(ws?.readyState === WebSocket.OPEN ? 'Connected' : 'Connecting...');
 	}, [ws]);
 
-	// si change de groupe actif, load si vide
+	// Reload history if switching group
 	useEffect(() => {
 		if (activeId !== null) {
 			const grp = groups.find((g) => g.id === activeId);
@@ -431,7 +453,7 @@ export default function WebSocketChat() {
 		}
 	}, [activeId, groups]);
 
-	// envoi d'un message
+	// Send a new chat message
 	const sendMessage = () => {
 		if (activeId == null || !ws || ws.readyState !== WebSocket.OPEN) return;
 		const now = Date.now();
@@ -442,22 +464,44 @@ export default function WebSocketChat() {
 			sent_at: new Date(now).toISOString(),
 		};
 		setGroups((prev) =>
-			prev.map((g) =>
-				g.id === activeId ? { ...g, messages: [...g.messages, newMsg] } : g
-			)
+			prev.map((g) => (g.id === activeId ? { ...g, messages: [...g.messages, newMsg] } : g))
 		);
 		ws.send(JSON.stringify({ action: 'new_message', group_id: activeId, message: input }));
 		setInput('');
 		setAtBottom(true);
 	};
 
-	// action amis: ouvre le chat privé
+	// Handle friend actions
 	const handleFriendAction = (u: User, action: string) => {
-		if (action === 'message' && u.privmsg_id != null) {
-			// si le groupe privé n'existe pas encore, on pourrait le créer… 
-			setActiveId(u.privmsg_id);
+		if (!ws || ws.readyState !== WebSocket.OPEN) return;
+		switch (action) {
+			case 'send_request':
+				ws.send(JSON.stringify({ action: 'friend_request', user_id: u.id }));
+				break;
+			case 'cancel_request':
+				ws.send(JSON.stringify({ action: 'cancel_request', user_id: u.id }));
+				break;
+			case 'accept_friend':
+				ws.send(JSON.stringify({ action: 'accept_friend', user_id: u.id }));
+				break;
+			case 'refuse_friend':
+				ws.send(JSON.stringify({ action: 'refuse_friend', user_id: u.id }));
+				break;
+			case 'remove_friend':
+				ws.send(JSON.stringify({ action: 'remove_friend', user_id: u.id }));
+				break;
+			case 'block':
+				ws.send(JSON.stringify({ action: 'block_user', user_id: u.id }));
+				break;
+			case 'unblock':
+				ws.send(JSON.stringify({ action: 'unblock_user', user_id: u.id }));
+				break;
+			case 'message':
+				if (u.relation?.privmsg_id) setActiveId(u.relation.privmsg_id);
+				break;
+			default:
+				break;
 		}
-		// … block / accept / etc.
 	};
 
 	const activeGroup: Group = groups.find((g) => g.id === activeId) || {
@@ -483,15 +527,19 @@ export default function WebSocketChat() {
 						}}
 						currentUserId={currentUser?.id ?? null}
 					/>
-					<FriendsList friends={friends} onAction={handleFriendAction} />
+					<FriendsList
+						friends={friends}
+						currentUserId={currentUser?.id ?? null}
+						onAction={handleFriendAction}
+					/>
 				</aside>
 
 				<div className="flex-1 flex flex-col min-h-0">
 					<ChatHeader
 						title={
 							activeGroup.private === 1 && currentUser
-								? (activeGroup.members.find((m) => m.id !== currentUser.id)?.username ||
-									activeGroup.name)
+								? activeGroup.members.find((m) => m.id !== currentUser.id)?.username ||
+								activeGroup.name
 								: activeGroup.name
 						}
 						status={status}
@@ -501,9 +549,7 @@ export default function WebSocketChat() {
 					<div className="relative flex-1 flex flex-col min-h-0">
 						{hasMoreHistory && activeGroup.messages.length > 0 && (
 							<button
-								onClick={() =>
-									loadHistory(activeGroup.id, activeGroup.messages[0].id)
-								}
+								onClick={() => loadHistory(activeGroup.id, activeGroup.messages[0].id)}
 								disabled={loadingHistory}
 								className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-gray-200 p-2 rounded-full hover:bg-gray-300 z-10"
 							>

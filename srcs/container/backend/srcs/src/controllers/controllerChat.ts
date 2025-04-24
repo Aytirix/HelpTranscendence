@@ -56,11 +56,18 @@ export const addOnlineUser = (state: State, ws: WebSocket, user: User) => {
 	if (!state.user.has(user.id)) {
 		state.user.set(user.id, user);
 	}
+	const userToUpdate = state.user.get(user.id);
+	if (userToUpdate) {
+		userToUpdate.online = true;
+	}
 	state.onlineSockets.set(user.id, ws);
 };
 
 export const removeOnlineUser = (state: State, user: User) => {
-	state.user.delete(user.id);
+	const userToUpdate = state.user.get(user.id);
+	if (userToUpdate) {
+		userToUpdate.online = false;
+	}
 	state.onlineSockets.delete(user.id);
 
 	state.user.forEach((user: User) => {

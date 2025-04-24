@@ -1,4 +1,4 @@
-import { User, Friends } from '@types';
+import { User, Friends, Group } from '@types';
 import executeReq from '@models/database';
 import { State } from '@typesChat';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -20,7 +20,7 @@ async function loadAllFriendRelationsFromDB(): Promise<Friends[]> {
 
 async function getFriendsForUser(userId: number, state: State): Promise<User[]> {
 	const query = `
-		SELECT u.id, u.email, u.username, u.avatar, u.lang, f.groupe_priv_msg_id 
+		SELECT u.id, u.email, u.username, u.avatar, u.lang, f.groupe_priv_msg_id, f.target, f.status
 		FROM friends f 
 		JOIN users u 
 			ON u.id = CASE 
@@ -40,13 +40,17 @@ async function getFriendsForUser(userId: number, state: State): Promise<User[]> 
 		username: friend.username,
 		avatar: friend.avatar,
 		lang: friend.lang,
-		privmsg_id: friend.groupe_priv_msg_id,
-	}));
+		relation: {
+			status: friend.status,
+			target: friend.target,
+			privmsg_id: friend.groupe_priv_msg_id,
+		},
+	} as User));
 
-	for (const { privmsg_id, ...userWithoutPrivmsg } of fullFriends) {
-		if (!state.user.has(userWithoutPrivmsg.id))
-			state.user.set(userWithoutPrivmsg.id, {
-				...userWithoutPrivmsg,
+	for (const { relation, ...userWithoutRelation } of fullFriends) {
+		if (!state.user.has(userWithoutRelation.id))
+			state.user.set(userWithoutRelation.id, {
+				...userWithoutRelation,
 			});
 	}
 
@@ -54,8 +58,35 @@ async function getFriendsForUser(userId: number, state: State): Promise<User[]> 
 	return fullFriends;
 }
 
+async function updateFriendRelation(user: User, friend: User, status: 'friend' | 'blocked' | 'pending', group: Group, state: State): Promise<boolean> {
+	const [user_one_id, user_two_id] = user.id < friend.id ? [user.id, friend.id] : [friend.id, user.id];
+	const query = `
+		INSERT INTO friends (target, user_one_id, user_two_id, status, groupe_priv_msg_id ) VALUES (null, ?, ?, ?, ?)
+		ON DUPLICATE KEY UPDATE status = VALUES(status), groupe_priv_msg_id = VALUES(groupe_priv_msg_id);
+	`;
+	const result: any = await executeReq(query, [user_one_id, user_two_id, status, group.id]);
+
+	if (result.affectedRows === 0) return false;
+	// mettre à jour la relation dans le state
+	const indexRelation = state.friends.findIndex(friend => (friend.user_one_id === user.id && friend.user_two_id === friend.id) || (friend.user_one_id === friend.id && friend.user_two_id === user.id));
+	if (indexRelation !== -1) {
+		state.friends[indexRelation].status = status;
+	}
+	else {
+		state.friends.push({
+			id: result.insertId,
+			user_one_id,
+			user_two_id,
+			target: friend.id,
+			groupe_priv_msg_id: group.id,
+			status,
+		});
+	}
+	return true;
+}
 
 export default {
 	loadAllFriendRelationsFromDB,
 	getFriendsForUser,
+	updateFriendRelation,
 }
