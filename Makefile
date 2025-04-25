@@ -4,6 +4,7 @@ DOCKER_COMPOSE=docker-compose
 .PHONY: all dev build down stop start lf lb re exec logs
 
 dev:
+	mkdir -p ./srcs/build
 	NODE_PROJET=dev $(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) up --build -d
 
 prod: down
