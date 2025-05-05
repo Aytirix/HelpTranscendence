@@ -58,7 +58,7 @@ async function getFriendsForUser(userId: number, state: State): Promise<User[]> 
 	return fullFriends;
 }
 
-async function updateFriendRelation(user: User, friend: User, status: 'friend' | 'blocked' | 'pending', group: Group, state: State): Promise<boolean> {
+async function updateFriendRelation(user: User, friend: User, status: 'friend' | 'blocked' | 'pending' | '', group: Group, state: State): Promise<boolean> {
 	const [user_one_id, user_two_id] = user.id < friend.id ? [user.id, friend.id] : [friend.id, user.id];
 	const query = `
 		INSERT INTO friends (target, user_one_id, user_two_id, status, groupe_priv_msg_id ) VALUES (null, ?, ?, ?, ?)
@@ -68,6 +68,10 @@ async function updateFriendRelation(user: User, friend: User, status: 'friend' |
 
 	if (result.affectedRows === 0) return false;
 	// mettre à jour la relation dans le state
+	// Ajouter le friends dans user
+	if (!state.user.has(friend.id)) {
+		state.user.set(friend.id, user);
+	}
 	const indexRelation = state.friends.findIndex(friend => (friend.user_one_id === user.id && friend.user_two_id === friend.id) || (friend.user_one_id === friend.id && friend.user_two_id === user.id));
 	if (indexRelation !== -1) {
 		state.friends[indexRelation].status = status;

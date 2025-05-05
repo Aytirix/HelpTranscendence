@@ -21,7 +21,7 @@ const useTheme = () => useContext(ThemeContext);
 // Pagination constant
 const PAGE_SIZE = 20;
 
-type RelationStatus = 'friend' | 'blocked' | 'pending';
+type RelationStatus = 'friend' | 'blocked' | 'pending' | '';
 
 type User = {
 	id: number;

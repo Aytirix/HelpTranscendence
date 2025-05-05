@@ -75,11 +75,33 @@ export interface req_accept_friend {
 	user_id: number;
 }
 
-// Reponse : Envoyer le message que x a accepté la demande d'ami a tous ces amis
+// Reponse : Envoyer le message que x a accepté la demande d'ami
 export interface res_accept_friend extends reponse {
 	action: 'accept_friend';
 	user?: User;
 	group?: Group;
+}
+
+// Request pour faire une demande d'ami
+export interface req_add_friend {
+	action: 'add_friend';
+	user_id: number;
+}
+
+// Reponse : Envoyer le message que x a envoye une demande d'ami
+export interface res_add_friend extends reponse {
+	action: 'add_friend';
+	user?: User;
+}
+
+export interface req_remove_friend {
+	action: 'remove_friend';
+	user_id: number;
+}
+
+export interface res_remove_friend extends reponse {
+	action: 'remove_friend';
+	user?: User;
 }
 
 export interface req_ping {

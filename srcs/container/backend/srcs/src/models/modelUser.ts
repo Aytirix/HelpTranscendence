@@ -87,10 +87,24 @@ export const UpdateUser = async (id: string, email: string = null, username: str
 	await executeReq(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
 };
 
+export const getUserById = async (id: number): Promise<User | null> => {
+	const result: any = await executeReq('SELECT * FROM users WHERE id = ?', [id]);
+	if (result.length === 0) {
+		return null;
+	}
+	return {
+		id: result[0].id,
+		username: result[0].username,
+		avatar: result[0].avatar,
+		lang: result[0].lang,
+	};
+};
+
 export default {
 	Login,
 	Register,
 	emailAlreadyExists,
 	usernameAlreadyExists,
 	UpdateUser,
+	getUserById,
 };

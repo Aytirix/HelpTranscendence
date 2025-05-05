@@ -1,6 +1,4 @@
 import { FastifyInstance, FastifyReply, FastifyRequest, Session } from 'fastify';
-import fastifyRateLimit from '@fastify/rate-limit';
-import fastifyHelmet from '@fastify/helmet';
 import { User } from '@types';
 import { IncomingMessage } from 'http';
 import { parse } from 'cookie';
@@ -42,35 +40,6 @@ export async function isAuth(request: FastifyRequest, reply: FastifyReply) {
 	}
 }
 
-export async function registerRateLimit(app: FastifyInstance) {
-	app.register(fastifyRateLimit, {
-		max: 500,
-		timeWindow: '1 minute',
-		errorResponseBuilder: (req, context) => {
-			return {
-				statusCode: 429,
-				error: 'Too Many Requests',
-				message: `Trop de requêtes. Veuillez réessayer dans ${Math.ceil(context.ttl / 1000)} secondes.`,
-			};
-		}
-	});
-}
-
-export async function registerHelmet(app: FastifyInstance) {
-	app.register(fastifyHelmet, {
-		contentSecurityPolicy: {
-			directives: {
-				defaultSrc: ["'self'"],
-				imgSrc: ["'self'", "https:", "data:"],
-				scriptSrc: ["'self'"],
-				upgradeInsecureRequests: [],
-				styleSrc: ["'self'", "https:"],
-				objectSrc: ["'none'"],
-			}
-		}
-	});
-}
-
 export async function getSessionByCookie(request: IncomingMessage): Promise<Session | null> {
 	try {
 		const cookies = parse(request.headers.cookie || '');
@@ -97,7 +66,5 @@ export default {
 	isNotAuthenticated,
 	isAuthenticated,
 	isAuth,
-	registerRateLimit,
-	registerHelmet,
 	getSessionByCookie,
 };

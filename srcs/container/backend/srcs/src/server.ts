@@ -2,9 +2,10 @@
 
 import fastify from 'fastify';
 import fastifyCors from '@fastify/cors';
+import fastifyRateLimit from '@fastify/rate-limit';
+import fastifyHelmet from '@fastify/helmet';
 import { registerHook } from './hook';
 import { registerSession } from './session';
-import { registerRateLimit, registerHelmet } from './Middleware';
 import { setupSwagger } from './docs';
 import { initWebSocket } from './WebSocket/wsInit';  // Import de la fonction WebSocket
 import userRoutes from './routes/userRoutes';
@@ -25,13 +26,33 @@ const ajv = new Ajv({
 addFormats(ajv);
 ajvErrors(ajv);
 app.setValidatorCompiler(({ schema }) => { return ajv.compile(schema); });
-// Middleware de sécurité
 (async () => {
 	await registerSession(app);
-	registerHook(app);
-	registerRateLimit(app);
-	registerHelmet(app);
 })();
+app.register(fastifyRateLimit, {
+	max: 500,
+	timeWindow: '10 minute',
+	errorResponseBuilder: (req, context) => {
+		return {
+			statusCode: 429,
+			error: 'Too Many Requests',
+			message: `Trop de requêtes. Veuillez réessayer dans ${Math.ceil(context.ttl / 1000)} secondes.`,
+		};
+	}
+});
+registerHook(app);
+app.register(fastifyHelmet, {
+	contentSecurityPolicy: {
+		directives: {
+			defaultSrc: ["'self'"],
+			imgSrc: ["'self'", "https:", "data:"],
+			scriptSrc: ["'self'"],
+			upgradeInsecureRequests: [],
+			styleSrc: ["'self'", "https:"],
+			objectSrc: ["'none'"],
+		}
+	}
+});
 
 app.register(fastifyCors, {
 	origin: 'https://localhost:3000',

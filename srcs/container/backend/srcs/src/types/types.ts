@@ -2,7 +2,7 @@ import { WebSocket } from 'ws';
 
 export interface User {
 	id: number;
-	email: string;
+	email?: string;
 	username: string;
 	password?: string;
 	lang: string;
@@ -11,7 +11,7 @@ export interface User {
 	privmsg_id?: number;
 	online?: boolean;
 	relation?: {
-		status: 'friend' | 'blocked' | 'pending';
+		status: 'friend' | 'blocked' | 'pending' | '';
 		target: number;
 		privmsg_id?: number;
 	}
@@ -40,5 +40,5 @@ export interface Friends {
 	user_two_id: number;
 	target: number;
 	groupe_priv_msg_id: number;
-	status: 'friend' | 'blocked' | 'pending';
+	status: 'friend' | 'blocked' | 'pending' | '';
 }
