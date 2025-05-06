@@ -114,18 +114,18 @@ export const newMessage = async (ws: WebSocket, user: User, state: State, req: r
 
 	// stockage du message dans la base de données
 	if (!req.message) {
-		ws.send(JSON.stringify({ action: 'new_message', result: 'error', notification: ['Message manquant'] } as res_newMessage));
+		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Message manquant'] } as reponse));
 		return;
 	}
 
 	if (req.message.length > 1000) {
-		ws.send(JSON.stringify({ action: 'new_message', result: 'error', notification: ['Message trop long'] } as res_newMessage));
+		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Message trop long'] } as reponse));
 		return;
 	}
 
 	const newMessage = await modelsChat.newMessage(group, user, req.message, sentAtDate);
 	if (!newMessage) {
-		ws.send(JSON.stringify({ action: 'new_message', result: 'error', notification: ['Erreur lors de l\'envoi du message'] } as res_newMessage));
+		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Erreur lors de l\'envoi du message'] } as reponse));
 		return;
 	}
 
@@ -152,7 +152,7 @@ export const loadMoreMessage = async (ws: WebSocket, user: User, state: State, r
 	if (!userInGroup(ws, user, group)) return;
 
 	if (req.firstMessageId < 0) {
-		ws.send(JSON.stringify({ action: 'loadMoreMessage', result: 'error', notification: ['ID du message manquant'] } as res_loadMoreMessage));
+		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['ID du message manquant'] } as reponse));
 		return;
 	}
 
@@ -162,7 +162,7 @@ export const loadMoreMessage = async (ws: WebSocket, user: User, state: State, r
 		// verifier si le firstMessageId est dans le groupe
 		index = group.messages.findIndex((message: Message) => message.id === req.firstMessageId);
 		if (index === -1) {
-			ws.send(JSON.stringify({ action: 'loadMoreMessage', result: 'error', notification: ['Message non trouvé'] } as res_loadMoreMessage));
+			ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Message non trouvé'] } as reponse));
 			return;
 		}
 	}
@@ -176,7 +176,7 @@ export const loadMoreMessage = async (ws: WebSocket, user: User, state: State, r
 		const messagesFromDb = await modelsChat.getMessagesFromGroup(group, 20);
 		messages = messagesToGet.concat(messagesFromDb);
 	}
-	ws.send(JSON.stringify({ action: 'loadMoreMessage', group_id: group.id, messages: messages } as res_loadMoreMessage));
+	ws.send(JSON.stringify({ action: 'loadMoreMessage', result: 'ok', group_id: group.id, messages: messages } as res_loadMoreMessage));
 }
 
 export default {

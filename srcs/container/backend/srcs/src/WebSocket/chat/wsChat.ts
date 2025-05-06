@@ -1,5 +1,5 @@
 import { Friends, Group, User } from '@types';
-import { State, request, req_loadMoreMessage, req_newMessage, res_pong, req_accept_friend, req_add_friend, req_remove_friend } from '@typesChat';
+import { State, request, req_loadMoreMessage, req_newMessage, res_pong, req_accept_friend, req_add_friend, req_remove_friend, req_refuse_friend, req_block_friend } from '@typesChat';
 import { IncomingMessage } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import modelsFriends from '@models/modelFriends';
@@ -68,10 +68,13 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 				controllerFriends.acceptFriendRequest(ws, user, state, (text as req_accept_friend));
 				break;
 			case 'refuse_friend':
+				controllerFriends.refuseFriendRequest(ws, user, state, (text as req_refuse_friend));
 				break;
 			case 'block_user':
+				controllerFriends.blockFriendRequest(ws, user, state, (text as req_block_friend));
 				break;
 			case 'unblock_user':
+				controllerFriends.unBlockFriendRequest(ws, user, state, (text as req_block_friend));
 				break;
 			default:
 				ws.send(/**1008,**/ 'Action non reconnue'); // to close

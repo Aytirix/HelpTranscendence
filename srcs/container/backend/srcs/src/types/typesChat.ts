@@ -39,8 +39,8 @@ export interface req_newMessage {
 // Envoyer le message a toutes les personnes de la conversation
 export interface res_newMessage extends reponse {
 	action: 'new_message';
-	group_id?: number;
-	message?: Message;
+	group_id: number;
+	message: Message;
 }
 
 // Reponse : Requete pour recuperer x messages qui n'ont pas encore été envoyés
@@ -78,8 +78,21 @@ export interface req_accept_friend {
 // Reponse : Envoyer le message que x a accepté la demande d'ami
 export interface res_accept_friend extends reponse {
 	action: 'accept_friend';
-	user?: User;
-	group?: Group;
+	user: User;
+	group: Group;
+}
+
+// Request pour refuser une demande d'ami
+export interface req_refuse_friend {
+	action: 'refuse_friend';
+	user_id: number;
+}
+
+// Reponse : Envoyer le message que x a refuser la demande d'ami
+export interface res_refuse_friend extends reponse {
+	action: 'refuse_friend';
+	user: User;
+	group: Group;
 }
 
 // Request pour faire une demande d'ami
@@ -91,7 +104,7 @@ export interface req_add_friend {
 // Reponse : Envoyer le message que x a envoye une demande d'ami
 export interface res_add_friend extends reponse {
 	action: 'add_friend';
-	user?: User;
+	user: User;
 }
 
 export interface req_remove_friend {
@@ -99,9 +112,19 @@ export interface req_remove_friend {
 	user_id: number;
 }
 
+export interface req_block_friend {
+	action: 'block_friend';
+	user_id: number;
+}
+
+export interface res_block_friend extends reponse {
+	action: 'block_friend' | 'unblock_friend';
+	user_id: number;
+}
+
 export interface res_remove_friend extends reponse {
 	action: 'remove_friend';
-	user?: User;
+	user: User;
 }
 
 export interface req_ping {
