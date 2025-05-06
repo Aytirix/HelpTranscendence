@@ -17,6 +17,10 @@ export async function setupSwagger(app: FastifyInstance) {
 						url: 'https://localhost:7000/',
 						description: 'Serveur de développement',
 					},
+					{
+						url: 'https://c2r12p3:7000/',
+						description: 'Serveur de développement',
+					}
 				],
 				components: {
 					securitySchemes: {

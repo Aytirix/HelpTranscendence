@@ -8,6 +8,7 @@ import fastifyCookie from '@fastify/cookie';
 import Middleware from '@Middleware';
 import chatWebSocket from './chat/wsChat';
 import { User } from '@types';
+import { pongWebSocket } from './pongGame/pongSocketHandler';
 
 let wss: WebSocketServer | null = null;
 
@@ -23,6 +24,9 @@ async function initWebSocket(server: FastifyInstance) {
 			case '/chat':
 				chatWebSocket(wss, ws, user, req);
 				break;
+			case '/pong' :
+				pongWebSocket(ws, user);
+				break; 
 			default:
 				const errorMsg = 'Erreur : chemin WebSocket non reconnu.';
 				console.warn(`[WebSocket] ${errorMsg} URL demandée: ${path}`);

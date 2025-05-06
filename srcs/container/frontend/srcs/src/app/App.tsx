@@ -7,8 +7,9 @@ function App() {
 
 	return (
 		<>
-			<nav>
+			<nav className="flex flex-col gap-4">
 				<Link to="/WebSocketTest">test WebSocket</Link>
+				<Link to="/Pong">pong tests</Link>
 			</nav>
 			<div>
 				<button onClick={() => setLanguage('fr')}>Français</button>

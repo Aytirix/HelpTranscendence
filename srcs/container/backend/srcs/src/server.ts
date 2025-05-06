@@ -12,6 +12,8 @@ import userRoutes from './routes/userRoutes';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import ajvErrors from 'ajv-errors';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const app = fastify({ trustProxy: true });
 

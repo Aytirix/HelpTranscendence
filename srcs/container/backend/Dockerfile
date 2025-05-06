@@ -13,6 +13,8 @@ RUN ln -snf /usr/share/zoneinfo/Europe/Paris /etc/localtime && \
 
 RUN mkdir -p /var/lib/sqlite && touch /var/lib/sqlite/db.sqlite
 
+RUN env
+
 COPY srcs/ .
 
 RUN chmod +x ./config/start.sh

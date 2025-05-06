@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
-const url = 'wss://localhost:7000';
+const url = `wss://${window.location.hostname}:7000`;
+
 
 interface SafeWebSocketProps {
 	endpoint: string;
