@@ -1,5 +1,5 @@
 class ApiService {
-	private static url = 'https://localhost:7000';
+	private static url = `https://${window.location.hostname}:7000`;
 
 	static async request(path: string, method: string, body?: JSON) {
 		const headers = new Headers({

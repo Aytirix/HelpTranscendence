@@ -11,6 +11,7 @@ export default defineConfig({
 			protocol: 'wss',
 			host: 'localhost',
 			port: 3000,
-		}
+		},
+		allowedHosts: true,
 	}
 });

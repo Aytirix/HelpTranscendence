@@ -55,7 +55,9 @@ app.register(fastifyHelmet, {
 });
 
 app.register(fastifyCors, {
-	origin: 'https://localhost:3000',
+	origin: (origin, cb) => {
+		return cb(null, true);
+	},
 	credentials: true,
 });
 
