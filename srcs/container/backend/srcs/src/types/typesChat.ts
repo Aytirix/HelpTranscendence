@@ -43,6 +43,36 @@ export interface res_newMessage extends reponse {
 	message: Message;
 }
 
+export interface req_addUserGroup {
+	action: 'add_user_group' | 'remove_user_group';
+	group_id: number;
+	user_id: number;
+}
+
+export interface req_leaveGroup {
+	action: 'leave_group';
+	group_id: number;
+}
+
+export interface res_addUserGroup {
+	action: 'add_user_group' | 'remove_user_group';
+	group_id: number;
+	users_id: number;
+}
+
+//  l'api attend cette reponse pour un nouveau message
+export interface req_createGroup {
+	action: 'create_group';
+	group_name: string;
+	users_id: number[];
+}
+
+// Envoyer le message a toutes les personnes de la conversation
+export interface res_createGroup extends reponse {
+	action: 'create_group';
+	group: Group;
+}
+
 // Reponse : Requete pour recuperer x messages qui n'ont pas encore été envoyés
 export interface req_loadMoreMessage {
 	action: 'loadMoreMessage';

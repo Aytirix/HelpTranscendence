@@ -22,12 +22,12 @@ async function getFriendsForUser(userId: number, state: State): Promise<User[]> 
 	const query = `
 		SELECT u.id, u.email, u.username, u.avatar, u.lang, f.groupe_priv_msg_id, f.target, f.status
 		FROM friends f 
-		JOIN users u 
+		JOIN users u
 			ON u.id = CASE 
 						WHEN f.user_one_id = ? THEN f.user_two_id 
 						ELSE f.user_one_id 
 					END 
-		WHERE f.user_one_id = ? OR f.user_two_id = ?;
+		WHERE (f.user_one_id = ? OR f.user_two_id = ?) AND f.status != '';
 	`;
 
 	const result: any = await executeReq(query, [userId, userId, userId]);
@@ -58,13 +58,13 @@ async function getFriendsForUser(userId: number, state: State): Promise<User[]> 
 	return fullFriends;
 }
 
-async function updateFriendRelation(user: User, friend: User, status: 'friend' | 'blocked' | 'pending' | '', group: Group, state: State): Promise<boolean> {
+async function updateFriendRelation(user: User, friend: User, status: 'friend' | 'blocked' | 'pending' | '', group_id: number | false = null, state: State): Promise<boolean> {
 	const [user_one_id, user_two_id] = user.id < friend.id ? [user.id, friend.id] : [friend.id, user.id];
 	const query = `
 		INSERT INTO friends (target, user_one_id, user_two_id, status, groupe_priv_msg_id ) VALUES (null, ?, ?, ?, ?)
-		ON DUPLICATE KEY UPDATE status = VALUES(status), groupe_priv_msg_id = VALUES(groupe_priv_msg_id);
+		ON DUPLICATE KEY UPDATE status = VALUES(status)${group_id !== false ? ', groupe_priv_msg_id = VALUES(groupe_priv_msg_id)' : ''};
 	`;
-	const result: any = await executeReq(query, [user_one_id, user_two_id, status, group.id]);
+	const result: any = await executeReq(query, [user_one_id, user_two_id, status, group_id !== false ? group_id : null]);
 
 	if (result.affectedRows === 0) return false;
 	// mettre à jour la relation dans le state
@@ -82,7 +82,7 @@ async function updateFriendRelation(user: User, friend: User, status: 'friend' |
 			user_one_id,
 			user_two_id,
 			target: friend.id,
-			groupe_priv_msg_id: group.id,
+			group_id: group_id !== false ? group_id : null,
 			status,
 		});
 	}

@@ -1,9 +1,9 @@
 import { Friends, Group, User } from '@types';
-import { State, request, req_loadMoreMessage, req_newMessage, res_pong, req_accept_friend, req_add_friend, req_remove_friend, req_refuse_friend, req_block_friend } from '@typesChat';
+import { State, request, req_loadMoreMessage, req_newMessage, res_pong, req_accept_friend, req_add_friend, req_remove_friend, req_refuse_friend, req_block_friend, req_createGroup, req_addUserGroup, req_leaveGroup } from '@typesChat';
 import { IncomingMessage } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import modelsFriends from '@models/modelFriends';
-import controllersChat, { removeOnlineUser } from '@controllers/controllerChat';
+import controllersChat from '@controllers/controllerChat';
 import controllerFriends from '@controllers/controllerFriends';
 import { mapToObject } from '@tools';
 
@@ -51,10 +51,15 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 				controllersChat.loadMoreMessage(ws, user, state, (text as req_loadMoreMessage));
 				break;
 			case 'create_group':
+				controllersChat.createGroup(ws, user, state, (text as req_createGroup));
 				break;
 			case 'add_user_to_group':
-				break;
+				controllersChat.addUserGroup(ws, user, state, (text as req_addUserGroup));
 			case 'remove_user_from_group':
+				controllersChat.removeUserGroup(ws, user, state, (text as req_addUserGroup));
+				break;
+			case 'leave_group':
+				controllersChat.leaveGroup(ws, user, state, (text as req_leaveGroup));
 				break;
 			case 'delete_group':
 				break;
@@ -69,6 +74,9 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 				break;
 			case 'refuse_friend':
 				controllerFriends.refuseFriendRequest(ws, user, state, (text as req_refuse_friend));
+				break;
+			case 'cancel_request':
+				controllerFriends.cancelFriendRequest(ws, user, state, (text as req_refuse_friend));
 				break;
 			case 'block_user':
 				controllerFriends.blockFriendRequest(ws, user, state, (text as req_block_friend));
@@ -100,7 +108,7 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 	});
 
 	ws.on('error', (error: Error) => {
-		removeOnlineUser(state, user);
+		controllersChat.removeOnlineUser(state, user);
 		console.error('Erreur WebSocket:', error);
 		if (ws.readyState === WebSocket.OPEN) {
 			ws.close(1008, 'Erreur WebSocket');

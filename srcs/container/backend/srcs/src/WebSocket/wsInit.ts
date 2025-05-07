@@ -51,7 +51,7 @@ async function initWebSocket(server: FastifyInstance) {
 		} catch (err) {
 			console.error('Erreur lors de la gestion de la connexion WebSocket:', err);
 			socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
-			socket.destroy();
+			socket.destroy(); 
 		}
 	});
 }

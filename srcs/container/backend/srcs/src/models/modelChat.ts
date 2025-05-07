@@ -116,6 +116,73 @@ async function newMessage(group: Group, user: User, message: string, sent_at: Da
 	return res;
 }
 
+async function createPublicGroup(user: User, name: string, list_users: User[], state: State): Promise<Group | null> {
+	const query2 = `INSERT INTO groups (name, private) VALUES (?, 0)`;
+	const result2: any = await executeReq(query2, [name]);
+	if (result2.affectedRows === 0) {
+		return null;
+	}
+	const group: Group = {
+		id: 0,
+		name: name,
+		members: [],
+		owners_id: [],
+		onlines_id: [],
+		messages: [],
+		private: false,
+	};
+	group.id = result2.insertId;
+	addUserToGroup(group, user, true);
+	for (const user of list_users) {
+		if (!addUserToGroup(group, user)) {
+			deleteGroup(group, state);
+			return null;
+		}
+	}
+	state.groups.set(group.id, group);
+	return group;
+}
+
+async function addUserToGroup(group: Group, user: User, isOwner: boolean = false): Promise<boolean> {
+	const query = `INSERT INTO group_users (group_id, user_id, owner) VALUES (?, ?, ?)`;
+	const result: any = await executeReq(query, [group.id, user.id, isOwner ? 1 : 0]);
+	if (result.affectedRows === 0) {
+		return false;
+	}
+	if (!group.members.some((member: User) => member.id === user.id)) {
+		group.members.push(user);
+	}
+	if (!group.onlines_id.includes(user.id)) {
+		group.onlines_id.push(user.id);
+	}
+	if (isOwner && !group.owners_id.includes(user.id)) {
+		group.owners_id.push(user.id);
+	}
+	return true;
+}
+
+async function removeUserFromGroup(group: Group, user: User): Promise<boolean> {
+	const query = `DELETE FROM group_users WHERE group_id = ? AND user_id = ?`;
+	const result: any = await executeReq(query, [group.id, user.id]);
+	if (result.affectedRows === 0) {
+		return false;
+	}
+	group.members = group.members.filter((member: User) => member.id !== user.id);
+	group.onlines_id = group.onlines_id.filter((id: number) => id !== user.id);
+	group.owners_id = group.owners_id.filter((id: number) => id !== user.id);
+	return true;
+}
+
+async function deleteGroup(group: Group, state: State): Promise<boolean> {
+	const query = `DELETE FROM groups WHERE id = ?`;
+	const result: any = await executeReq(query, [group.id]);
+	if (result.affectedRows === 0) {
+		return false;
+	}
+	state.groups.delete(group.id);
+	return true;
+}
+
 async function createPrivateGroup(user: User, friend: User, state: State): Promise<Group | null> {
 	const query = `SELECT * FROM groups WHERE private = 1 AND id IN (SELECT group_id FROM group_users WHERE user_id IN (?, ?))`;
 	const result: any = await executeReq(query, [user.id, friend.id]);
@@ -135,28 +202,27 @@ async function createPrivateGroup(user: User, friend: User, state: State): Promi
 		return group2;
 	}
 
-	
+
 	const query2 = `INSERT INTO groups (private) VALUES (1)`;
 	const result2: any = await executeReq(query2);
 	if (result2.affectedRows === 0) {
 		return null;
 	}
 	const groupId = result2.insertId;
-	const query3 = `INSERT INTO group_users (group_id, user_id, owner) VALUES (?, ?, 1), (?, ?, 1)`;
-	const result3: any = await executeReq(query3, [groupId, user.id, groupId, friend.id]);
-	if (result3.affectedRows === 0) {
-		return null;
-	}
 	const group: Group = {
 		id: groupId,
 		name: '',
-		members: [user, friend],
-		owners_id: [user.id, friend.id],
-		onlines_id: [user.id, ...(friend.online ? [friend.id] : [])],
+		members: [],
+		owners_id: [],
+		onlines_id: [],
 		messages: [],
 		private: true,
 	};
 	state.groups.set(groupId, group);
+	if (!addUserToGroup(group, user, true) || !addUserToGroup(group, friend, true)) {
+		deleteGroup(group, state);
+		return null;
+	}
 	return group;
 }
 
@@ -164,5 +230,9 @@ export default {
 	getAllGroupsFromUser,
 	getMessagesFromGroup,
 	newMessage,
+	createPublicGroup,
+	addUserToGroup,
+	removeUserFromGroup,
+	deleteGroup,
 	createPrivateGroup,
 }

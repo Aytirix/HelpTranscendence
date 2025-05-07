@@ -39,6 +39,6 @@ export interface Friends {
 	user_one_id: number;
 	user_two_id: number;
 	target: number;
-	groupe_priv_msg_id: number;
+	group_id: number;
 	status: 'friend' | 'blocked' | 'pending' | '';
 }
