@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
-import useSafeWebSocket from '../api/useSafeWebSocket';
+import useSafeWebSocket from '../../api/useSafeWebSocket';
 
 // === Theme Context ===
 const ThemeContext = createContext<{ dark: boolean; toggle: () => void }>({

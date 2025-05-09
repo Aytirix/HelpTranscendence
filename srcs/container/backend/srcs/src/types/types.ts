@@ -5,7 +5,7 @@ export interface User {
 	email?: string;
 	username: string;
 	password?: string;
-	lang: string;
+	lang?: string;
 	google_token?: string;
 	avatar?: string;
 	privmsg_id?: number;

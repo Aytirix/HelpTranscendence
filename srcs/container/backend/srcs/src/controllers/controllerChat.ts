@@ -1,5 +1,5 @@
 import { Friends, Group, Message, User } from '@types';
-import { send_friend_connected, res_disconnect, req_newMessage, res_newMessage, State, send_init_connected, req_loadMoreMessage, res_loadMoreMessage, reponse, req_createGroup, res_createGroup, req_addUserGroup, res_addUserGroup, req_leaveGroup } from '@typesChat';
+import { send_friend_connected, res_disconnect, req_newMessage, res_newMessage, State, send_init_connected, req_loadMoreMessage, res_loadMoreMessage, reponse, req_createGroup, res_createGroup, req_addUserGroup, res_addUserGroup, req_leaveGroup, req_deleteGroup } from '@typesChat';
 import { WebSocketServer, WebSocket } from 'ws';
 import modelsChat from '@models/modelChat';
 import modelsFriends from '@models/modelFriends';
@@ -30,10 +30,10 @@ export function groupExists(ws: WebSocket, state: State, group_id: number): Grou
  * @param group Groupe à vérifier
  * @returns true si l'utilisateur est membre du groupe, false sinon
 */
-export function userInGroup(ws: WebSocket, user: User, group: Group): boolean {
+export function userInGroup(ws: WebSocket, user: User, group: Group, send: boolean = true): boolean {
 	const res: boolean = group.members.some((member: User) => member.id === user.id);
 	if (!res) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Vous n\'êtes pas membre de ce groupe'] } as reponse));
+		if (send) ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Vous n\'êtes pas membre de ce groupe'] } as reponse));
 		return false;
 	}
 	return true;
@@ -106,12 +106,29 @@ export const init_connexion = async (ws: WebSocket, user: User, state: State) =>
 
 	broadcastAllGroupUsers(user, state, null, JSON.stringify({ action: 'friend_connected', user_id: user.id } as send_friend_connected));
 
+	// recuprer les groupes de l'utilisateur
+	const userGroups = new Map(
+		Array.from(state.groups.entries()).filter(([_, group]: [number, Group]) => {
+			let isFriend = false;
+			for (const member of group.members) {
+				if (member.id !== user.id) {
+					const relation = controllerFriends.getRelationFriend(user.id, member.id, state);
+					if (relation && relation.status === 'friend') isFriend = true;
+					break;
+				}
+			}
+			if (!group.private) return userInGroup(ws, user, group, false);
+			if (group.private && isFriend) return userInGroup(ws, user, group, false);
+			return false;
+		})
+	);
+
 	// Envoi de la liste des groupes et utilisateurs connectés à l'utilisateur
 	const send: send_init_connected = {
 		action: 'init_connected',
 		result: 'ok',
 		user: { ...user },
-		groups: mapToObject(state.groups),
+		groups: mapToObject(userGroups),
 		friends: friends.map(friend => ({ ...friend, email: undefined })), // Remove email from each friend
 	};
 
@@ -217,14 +234,18 @@ export const createGroup = async (ws: WebSocket, user: User, state: State, req: 
 	req.users_id = req.users_id.filter((id: number) => id !== user.id);
 	const users: User[] = [];
 	for (const userId of req.users_id) {
-		const userToAdd = state.user.get(userId);
+		const userToAdd = state.user.get(userId) || await modelUser.getUserById(userId);
 		if (!userToAdd) {
 			ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Utilisateur non trouvé'] } as reponse));
 			return;
 		}
-		const relation: Friends = state.friends.find(friend =>
-			(friend.user_one_id === user.id && friend.user_two_id === userId) ||
-			(friend.user_one_id === userId && friend.user_two_id === user.id) || relation.status === '');
+		let relation: Friends | undefined;
+		state.friends.forEach(friend => {
+			if ((friend.user_one_id === user.id && friend.user_two_id === userId) ||
+				(friend.user_one_id === userId && friend.user_two_id === user.id)) {
+				relation = friend;
+			}
+		});
 		if (!relation || relation.status !== 'blocked') {
 			users.push(userToAdd);
 		}
@@ -342,12 +363,39 @@ export const leaveGroup = async (ws: WebSocket, user: User, state: State, req: r
 	}
 	ws.send(JSON.stringify({ action: 'remove_user_group', result: 'ok', group_id: group.id, users_id: user.id, notification: [`Vous avez quitté le groupe ${group.name}`] } as res_addUserGroup));
 
-	// Envoi de la notification à tout les membres du groupe sauf l'utilisateur qui a ajouté
 	group.members.forEach((member: User) => {
 		if (member.id !== user.id) {
 			const wsMember = state.onlineSockets.get(member.id);
 			if (wsMember && wsMember.readyState === WebSocket.OPEN) {
 				wsMember.send(JSON.stringify({ action: 'remove_user_group', result: 'ok', group_id: group.id, users_id: user.id, notification: [`${user.username} a quitté le groupe ${group.name}`] } as res_addUserGroup));
+			}
+		}
+	});
+}
+
+export const deleteGroup = async (ws: WebSocket, user: User, state: State, req: req_deleteGroup) => {
+	const group = groupExists(ws, state, req.group_id);
+	if (!group) return;
+
+	if (!userIsOwnerGroup(ws, user, group)) return;
+
+	if (group.private) {
+		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Vous ne pouvez pas supprimer un groupe privé'] } as reponse));
+		return;
+	}
+
+	const del = await modelsChat.deleteGroup(group.id, state);
+	if (!del) {
+		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: [`Erreur pour supprimer le groupe ${group.name}`] } as reponse));
+		return;
+	}
+	ws.send(JSON.stringify({ action: 'remove_user_group', result: 'ok', group_id: group.id, users_id: user.id, notification: [`Le groupe ${group.name} a été supprimé`] } as res_addUserGroup));
+
+	group.members.forEach((member: User) => {
+		if (member.id !== user.id) {
+			const wsMember = state.onlineSockets.get(member.id);
+			if (wsMember && wsMember.readyState === WebSocket.OPEN) {
+				wsMember.send(JSON.stringify({ action: 'remove_user_group', result: 'ok', group_id: group.id, users_id: user.id, notification: [`${user.username} a supprimé le groupe ${group.name}`] } as res_addUserGroup));
 			}
 		}
 	});
@@ -364,4 +412,5 @@ export default {
 	addUserGroup,
 	removeUserGroup,
 	leaveGroup,
+	deleteGroup,
 };

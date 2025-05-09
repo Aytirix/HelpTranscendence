@@ -100,6 +100,23 @@ export const getUserById = async (id: number): Promise<User | null> => {
 	};
 };
 
+export const searchUser = async (name: string): Promise<User[]> => {
+	const result: any = await executeReq('SELECT * FROM users WHERE username LIKE ? LIMIT 10', [`%${name}%`]);
+	if (result.length === 0) {
+		return [];
+	}
+	const users: User[] = [];
+	for (const user of result) {
+		users.push({
+			id: user.id,
+			username: user.username,
+			avatar: user.avatar,
+			lang: user.lang,
+		});
+	}
+	return users;
+};
+
 export default {
 	Login,
 	Register,
@@ -107,4 +124,5 @@ export default {
 	usernameAlreadyExists,
 	UpdateUser,
 	getUserById,
+	searchUser,
 };

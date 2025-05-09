@@ -135,7 +135,7 @@ async function createPublicGroup(user: User, name: string, list_users: User[], s
 	addUserToGroup(group, user, true);
 	for (const user of list_users) {
 		if (!addUserToGroup(group, user)) {
-			deleteGroup(group, state);
+			deleteGroup(group.id, state);
 			return null;
 		}
 	}
@@ -173,13 +173,13 @@ async function removeUserFromGroup(group: Group, user: User): Promise<boolean> {
 	return true;
 }
 
-async function deleteGroup(group: Group, state: State): Promise<boolean> {
+async function deleteGroup(group_id: number, state: State): Promise<boolean> {
 	const query = `DELETE FROM groups WHERE id = ?`;
-	const result: any = await executeReq(query, [group.id]);
+	const result: any = await executeReq(query, [group_id]);
 	if (result.affectedRows === 0) {
 		return false;
 	}
-	state.groups.delete(group.id);
+	state.groups.delete(group_id);
 	return true;
 }
 
@@ -220,7 +220,7 @@ async function createPrivateGroup(user: User, friend: User, state: State): Promi
 	};
 	state.groups.set(groupId, group);
 	if (!addUserToGroup(group, user, true) || !addUserToGroup(group, friend, true)) {
-		deleteGroup(group, state);
+		deleteGroup(group.id, state);
 		return null;
 	}
 	return group;

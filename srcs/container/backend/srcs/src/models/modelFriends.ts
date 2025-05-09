@@ -3,19 +3,24 @@ import executeReq from '@models/database';
 import { State } from '@typesChat';
 import { WebSocketServer, WebSocket } from 'ws';
 
-async function loadAllFriendRelationsFromDB(): Promise<Friends[]> {
+async function loadAllFriendRelationsFromDB(): Promise<Map<number, Friends>> {
 	const query = `SELECT * FROM friends`;
 	const result: any = await executeReq(query);
 
-	if (result.length === 0) return [];
+	if (result.length === 0) return new Map<number, Friends>();
 
-	return result.map((friend: any) => ({
-		id: friend.id,
-		user_one_id: friend.user_one_id,
-		user_two_id: friend.user_two_id,
-		target: friend.target,
-		status: friend.status,
-	})) as Friends[];
+	return new Map<number, Friends>(
+		result.map((friend: any) => [
+			friend.id,
+			{
+				id: friend.id,
+				user_one_id: friend.user_one_id,
+				user_two_id: friend.user_two_id,
+				target: friend.target,
+				status: friend.status,
+			},
+		])
+	);
 }
 
 async function getFriendsForUser(userId: number, state: State): Promise<User[]> {
@@ -61,10 +66,10 @@ async function getFriendsForUser(userId: number, state: State): Promise<User[]> 
 async function updateFriendRelation(user: User, friend: User, status: 'friend' | 'blocked' | 'pending' | '', group_id: number | false = null, state: State): Promise<boolean> {
 	const [user_one_id, user_two_id] = user.id < friend.id ? [user.id, friend.id] : [friend.id, user.id];
 	const query = `
-		INSERT INTO friends (target, user_one_id, user_two_id, status, groupe_priv_msg_id ) VALUES (null, ?, ?, ?, ?)
-		ON DUPLICATE KEY UPDATE status = VALUES(status)${group_id !== false ? ', groupe_priv_msg_id = VALUES(groupe_priv_msg_id)' : ''};
+		INSERT INTO friends (target, user_one_id, user_two_id, status, groupe_priv_msg_id ) VALUES (?, ?, ?, ?, ?)
+		ON DUPLICATE KEY UPDATE status = VALUES(status), target = VALUES(target)${group_id !== false ? ', groupe_priv_msg_id = VALUES(groupe_priv_msg_id)' : ''};
 	`;
-	const result: any = await executeReq(query, [user_one_id, user_two_id, status, group_id !== false ? group_id : null]);
+	const result: any = await executeReq(query, [friend.id, user_one_id, user_two_id, status, group_id !== false ? group_id : null]);
 
 	if (result.affectedRows === 0) return false;
 	// mettre à jour la relation dans le state
@@ -72,12 +77,16 @@ async function updateFriendRelation(user: User, friend: User, status: 'friend' |
 	if (!state.user.has(friend.id)) {
 		state.user.set(friend.id, user);
 	}
-	const indexRelation = state.friends.findIndex(friend => (friend.user_one_id === user.id && friend.user_two_id === friend.id) || (friend.user_one_id === friend.id && friend.user_two_id === user.id));
-	if (indexRelation !== -1) {
-		state.friends[indexRelation].status = status;
-	}
-	else {
-		state.friends.push({
+	if (state.friends.has(result.insertId)) {
+		const relation = state.friends.get(result.insertId);
+		if (relation) {
+			relation.status = status;
+			relation.target = friend.id;
+			relation.group_id = group_id !== false ? group_id : relation.group_id;
+		}
+		state.friends.set(result.insertId, relation);
+	} else {
+		state.friends.set(result.insertId, {
 			id: result.insertId,
 			user_one_id,
 			user_two_id,

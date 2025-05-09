@@ -1,19 +1,10 @@
 import { Message, Group, User, Friends } from '@types';
-import { send_friend_connected, req_newMessage, res_newMessage, State, send_init_connected, req_loadMoreMessage, res_loadMoreMessage, req_accept_friend, res_accept_friend, res_add_friend, req_add_friend, req_remove_friend, res_remove_friend, req_refuse_friend, res_refuse_friend, reponse, req_block_friend, res_block_friend } from '@typesChat';
+import { send_friend_connected, req_newMessage, res_newMessage, State, send_init_connected, req_loadMoreMessage, res_loadMoreMessage, req_accept_friend, res_accept_friend, res_add_friend, req_add_friend, req_remove_friend, res_remove_friend, req_refuse_friend, res_refuse_friend, reponse, req_block_user, res_block_user, req_search_user, res_search_user } from '@typesChat';
 import { WebSocketServer, WebSocket } from 'ws';
 import modelsChat from '@models/modelChat';
 import modelsFriends from '@models/modelFriends';
 import modelsUser from '@models/modelUser';
 import { IncomingMessage } from 'http';
-
-export function getConnectedFriends(userId: number, state: State): User[] {
-	const friendsIds = state.friendsByUser.get(userId) || [];
-
-	return friendsIds
-		.map(friendId => state.user.get(friendId))
-		.filter((user): user is User => user !== undefined)
-		.filter(user => state.onlineSockets.has(user.id));
-}
 
 export async function getFriends(userId: number, state: State): Promise<User[]> {
 	const friendsIds = await modelsFriends.getFriendsForUser(userId, state);
@@ -28,6 +19,18 @@ export async function getFriends(userId: number, state: State): Promise<User[]> 
 	return friendsIds;
 }
 
+export function getRelationFriend(user_id: number, friend_id: number, state: State): Friends | undefined {
+	let relation: Friends | undefined;
+	for (const friend of state.friends.values()) {
+		if ((friend.user_one_id === user_id && friend.user_two_id === friend_id) ||
+			(friend.user_one_id === friend_id && friend.user_two_id === user_id)) {
+			relation = friend;
+			break;
+		}
+	}
+	return relation;
+}
+
 /**
  * Vérifie si un utilisateur est bloqué par un autre utilisateur ou s'il a bloqué un autre utilisateur.
  *
@@ -39,9 +42,7 @@ export async function getFriends(userId: number, state: State): Promise<User[]> 
  * @returns `true` si l'utilisateur est bloqué ou a bloqué l'autre utilisateur, sinon `false`.
  */
 export function userIsBlocked(ws: WebSocket, user: User, friend: User, state: State, shouldBlock: boolean): boolean {
-	const relation = state.friends.find(friend =>
-		(friend.user_one_id === user.id && friend.user_two_id === friend.id) ||
-		(friend.user_one_id === friend.id && friend.user_two_id === user.id));
+	const relation = getRelationFriend(user.id, friend.id, state);
 
 	if (relation && relation.status === 'blocked' && relation.target === user.id) {
 		if (shouldBlock) {
@@ -64,30 +65,48 @@ export function userIsBlocked(ws: WebSocket, user: User, friend: User, state: St
 	return false;
 }
 
-function buildFriendsMap(friends: Friends[]): Map<number, number[]> {
-	const map = new Map<number, number[]>();
-
-	for (const relation of friends) {
-		const { user_one_id: a, user_two_id: b } = relation;
-
-		if (!map.has(a)) map.set(a, []);
-		if (!map.has(b)) map.set(b, []);
-
-		map.get(a)!.push(b);
-		map.get(b)!.push(a);
+export const searchUser = async (ws: WebSocket, user: User, state: State, text: req_search_user) => {
+	const { name } = text;
+	let users: User[] = [];
+	if (name && name.length >= 3 && name.length <= 15) {
+		users = await modelsUser.searchUser(name);
+		if (users.length === 0) {
+			return;
+		}
 	}
 
-	return map;
+	// filtrer les utilisateurs pour ne pas afficher l'utilisateur lui-même et ceux qui sont déjà amis
+	users = users.filter((userSearch) => {
+		if (userSearch.id === user.id) return false;
+		let relation: Friends | undefined;
+		for (const [, friend] of state.friends) {
+			if ((friend.user_one_id === user.id && friend.user_two_id === userSearch.id) ||
+				(friend.user_one_id === userSearch.id && friend.user_two_id === user.id)) {
+				relation = friend;
+				break;
+			}
+		}
+		if (relation && relation.status != '') {
+			return false;
+		}
+		return true;
+	});
+
+	ws.send(JSON.stringify({
+		action: 'search_user',
+		result: 'ok',
+		users,
+	} as res_search_user));
 }
 
-export const addFriendRequest = async (ws: WebSocket, user: User, state: State, text: req_add_friend) => {
+export const addFriend = async (ws: WebSocket, user: User, state: State, text: req_add_friend) => {
 	const { user_id } = text;
 	if (!user_id) {
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Veuillez spécifier un id d\'utilisateur'] } as reponse));
 		return;
 	}
 
-	const friend = await modelsUser.getUserById(user_id);
+	const friend = state.user.get(user_id) || await modelsUser.getUserById(user_id);
 	if (!friend) {
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Cet utilisateur n\'existe pas'] } as reponse));
 		return;
@@ -96,9 +115,9 @@ export const addFriendRequest = async (ws: WebSocket, user: User, state: State, 
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Vous ne pouvez pas faire une demande d\'ami à vous-même'] } as reponse));
 		return;
 	}
-	const relation = state.friends.find(friend =>
-		(friend.user_one_id === user.id && friend.user_two_id === user_id) ||
-		(friend.user_one_id === user_id && friend.user_two_id === user.id));
+
+	const relation = getRelationFriend(user.id, user_id, state);
+
 	if (relation) {
 		switch (relation.status) {
 			case 'friend':
@@ -128,6 +147,7 @@ export const addFriendRequest = async (ws: WebSocket, user: User, state: State, 
 		return;
 	}
 
+	console.log('friend', friend);
 	if (friend.online) {
 		const wsFriend = state.onlineSockets.get(friend.id);
 		if (wsFriend) {
@@ -148,31 +168,38 @@ export const addFriendRequest = async (ws: WebSocket, user: User, state: State, 
 	ws.send(JSON.stringify({
 		action: 'add_friend',
 		result: 'ok',
+		user: {
+			id: friend.id,
+			username: friend.username,
+			avatar: friend.avatar,
+			lang: friend.lang,
+			online: friend.online
+		},
 		notification: [`Vous avez envoyé une demande d'ami à ${friend.username}`],
 	} as res_add_friend));
 }
 
-export const removeFriendRequest = async (ws: WebSocket, user: User, state: State, text: req_remove_friend) => {
+export const removeFriend = async (ws: WebSocket, user: User, state: State, text: req_remove_friend) => {
 	const { user_id } = text;
 	if (!user_id) {
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Veuillez spécifier un id d\'utilisateur'] } as reponse));
 		return;
 	}
-	const friend = state.user.get(user_id);
+	const friend = state.user.get(user_id) || await modelsUser.getUserById(user_id);
 	if (!friend) {
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Cet utilisateur n\'existe pas'] } as reponse));
 		return;
 	}
-	const relation: Friends = state.friends.find(friend =>
-		(friend.user_one_id === user.id && friend.user_two_id === user_id) ||
-		(friend.user_one_id === user_id && friend.user_two_id === user.id) || relation.status === '');
+
+	const relation = getRelationFriend(user.id, friend.id, state);
+
 	if (!relation) {
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Cet utilisateur n\'a pas de lien avec vous'] } as reponse));
 		return;
 	}
 	switch (relation.status) {
 		case 'friend':
-			if (await modelsFriends.updateFriendRelation(user, friend, '', relation.group_id, state) == false) {
+			if (await modelsFriends.updateFriendRelation(user, friend, '', false, state) == false) {
 				ws.send(JSON.stringify({ action: 'error', result: 'error', notification: [`Erreur lors de la suppression de l'ami`] } as reponse));
 				return;
 			}
@@ -181,6 +208,8 @@ export const removeFriendRequest = async (ws: WebSocket, user: User, state: Stat
 				if (wsFriend) {
 					wsFriend.send(JSON.stringify({
 						action: 'remove_friend',
+						user_id: user.id,
+						group_id: relation.group_id,
 						result: 'ok',
 						notification: [`${user.username} vous a supprimé de ses amis`],
 					} as res_remove_friend));
@@ -188,6 +217,8 @@ export const removeFriendRequest = async (ws: WebSocket, user: User, state: Stat
 			}
 			ws.send(JSON.stringify({
 				action: 'remove_friend',
+				user_id: friend.id,
+				group_id: relation.group_id,
 				result: 'ok',
 				notification: [`Vous avez supprimé ${friend.username} de vos amis`],
 			} as res_remove_friend));
@@ -195,22 +226,20 @@ export const removeFriendRequest = async (ws: WebSocket, user: User, state: Stat
 	}
 }
 
-export const acceptFriendRequest = async (ws: WebSocket, user: User, state: State, text: req_accept_friend) => {
+export const acceptFriend = async (ws: WebSocket, user: User, state: State, text: req_accept_friend) => {
 	const { user_id } = text;
 	if (!user_id) {
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Veuillez spécifier un id d\'utilisateur'] } as reponse));
 	}
 
-	const relation = state.friends.find(friend =>
-		(friend.user_one_id === user.id && friend.user_two_id === user_id) ||
-		(friend.user_one_id === user_id && friend.user_two_id === user.id) || relation.status === '');
+	const relation = getRelationFriend(user.id, user_id, state);
 	if (!relation) {
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Cet utilisateur n\'a pas de lien avec vous'] } as reponse));
 		return;
 	}
 
 	if (relation.status === 'pending' && relation.target === user.id) {
-		const friend = state.user.get(user_id);
+		const friend = state.user.get(user_id) || await modelsUser.getUserById(user_id);
 		let groupPrivMsg: Group | null = await modelsChat.createPrivateGroup(user, friend, state);
 		if (groupPrivMsg == null) {
 			ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Erreur lors de la création du groupe privé'] } as reponse));
@@ -229,7 +258,7 @@ export const acceptFriendRequest = async (ws: WebSocket, user: User, state: Stat
 					username: friend.username,
 					avatar: friend.avatar,
 					lang: friend.lang,
-					online: friend.online
+					online: friend.online,
 				},
 				group: groupPrivMsg,
 				notification: [`Vous avez accepté la demande d'ami de ${friend.username}`],
@@ -243,7 +272,7 @@ export const acceptFriendRequest = async (ws: WebSocket, user: User, state: Stat
 					result: 'ok',
 					user: {
 						id: user.id,
-						email: user.email,
+						username: user.username,
 						avatar: user.avatar,
 						lang: user.lang,
 						online: user.online
@@ -256,22 +285,21 @@ export const acceptFriendRequest = async (ws: WebSocket, user: User, state: Stat
 	}
 }
 
-export const refuseFriendRequest = async (ws: WebSocket, user: User, state: State, text: req_refuse_friend) => {
+export const refuseFriend = async (ws: WebSocket, user: User, state: State, text: req_refuse_friend) => {
 	const { user_id } = text;
 	if (!user_id) {
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Veuillez spécifier un id d\'utilisateur'] } as reponse));
 	}
 
-	const relation = state.friends.find(friend =>
-		(friend.user_one_id === user.id && friend.user_two_id === user_id) ||
-		(friend.user_one_id === user_id && friend.user_two_id === user.id) || relation.status === '');
+	const relation = getRelationFriend(user.id, user_id, state);
+
 	if (!relation) {
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Cet utilisateur n\'a pas de lien avec vous'] } as reponse));
 		return;
 	}
 
 	if (relation.status === 'pending' && relation.target === user.id) {
-		const friend = state.user.get(user_id);
+		const friend = state.user.get(user_id) || await modelsUser.getUserById(user_id);
 		let groupPrivMsg: Group | null = await modelsChat.createPrivateGroup(user, friend, state);
 		if (groupPrivMsg == null) {
 			ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Erreur lors de la création du groupe privé'] } as reponse));
@@ -284,6 +312,8 @@ export const refuseFriendRequest = async (ws: WebSocket, user: User, state: Stat
 		if (friend) {
 			ws.send(JSON.stringify({
 				action: 'refuse_friend',
+				user_id: friend.id,
+				group_id: groupPrivMsg.id,
 				result: 'ok',
 				notification: [`Vous avez refusé la demande d'ami de ${friend.username}`],
 			} as res_refuse_friend));
@@ -293,6 +323,8 @@ export const refuseFriendRequest = async (ws: WebSocket, user: User, state: Stat
 			if (wsFriend) {
 				wsFriend.send(JSON.stringify({
 					action: 'refuse_friend',
+					user_id: user.id,
+					group_id: groupPrivMsg.id,
 					result: 'ok',
 					notification: [`${user.username} a refusé votre demande d'ami`],
 				} as res_refuse_friend));
@@ -301,22 +333,21 @@ export const refuseFriendRequest = async (ws: WebSocket, user: User, state: Stat
 	}
 }
 
-export const cancelFriendRequest = async (ws: WebSocket, user: User, state: State, text: req_refuse_friend) => {
+export const cancelFriend = async (ws: WebSocket, user: User, state: State, text: req_refuse_friend) => {
 	const { user_id } = text;
 	if (!user_id) {
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Veuillez spécifier un id d\'utilisateur'] } as reponse));
 	}
 
-	const relation = state.friends.find(friend =>
-		(friend.user_one_id === user.id && friend.user_two_id === user_id) ||
-		(friend.user_one_id === user_id && friend.user_two_id === user.id) || relation.status === '');
+	const relation = getRelationFriend(user.id, user_id, state);
+
 	if (!relation) {
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Cet utilisateur n\'a pas de lien avec vous'] } as reponse));
 		return;
 	}
 
 	if (relation.status === 'pending' && relation.target !== user.id) {
-		const friend = state.user.get(user_id);
+		const friend = state.user.get(user_id) || await modelsUser.getUserById(user_id);
 		if (await modelsFriends.updateFriendRelation(user, friend, '', false, state) == false) {
 			ws.send(JSON.stringify({ action: 'error', result: 'error', notification: [`Erreur lors de la suppression de la demande d'ami`] } as reponse));
 			return;
@@ -325,6 +356,8 @@ export const cancelFriendRequest = async (ws: WebSocket, user: User, state: Stat
 			ws.send(JSON.stringify({
 				action: 'refuse_friend',
 				result: 'ok',
+				user_id: friend.id,
+				group_id: relation.group_id,
 				notification: [`Vous avez annulé la demande d'ami a ${friend.username}`],
 			} as res_refuse_friend));
 		}
@@ -334,6 +367,8 @@ export const cancelFriendRequest = async (ws: WebSocket, user: User, state: Stat
 				wsFriend.send(JSON.stringify({
 					action: 'refuse_friend',
 					result: 'ok',
+					user_id: user.id,
+					group_id: relation.group_id,
 					notification: [`${user.username} a annulé la demande d'ami`],
 				} as res_refuse_friend));
 			}
@@ -341,13 +376,13 @@ export const cancelFriendRequest = async (ws: WebSocket, user: User, state: Stat
 	}
 }
 
-export const blockFriendRequest = async (ws: WebSocket, user: User, state: State, text: req_block_friend) => {
+export const blockFriend = async (ws: WebSocket, user: User, state: State, text: req_block_user) => {
 	const { user_id } = text;
 	if (!user_id) {
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Veuillez spécifier un id d\'utilisateur'] } as reponse));
 	}
 
-	const friend = state.user.get(user_id);
+	const friend = state.user.get(user_id) || await modelsUser.getUserById(user_id);
 
 	if (userIsBlocked(ws, user, friend, state, true)) return;
 
@@ -356,72 +391,78 @@ export const blockFriendRequest = async (ws: WebSocket, user: User, state: State
 		return;
 	}
 	ws.send(JSON.stringify({
-		action: 'block_friend',
+		action: 'block_user',
 		result: 'ok',
 		user_id: friend.id,
 		notification: [`Vous avez bloqué ${friend.username}`],
-	} as res_block_friend));
+	} as res_block_user));
 	if (friend.online) {
 		const wsFriend = state.onlineSockets.get(friend.id);
 		if (wsFriend) {
 			wsFriend.send(JSON.stringify({
-				action: 'block_friend',
+				action: 'block_user',
 				result: 'ok',
 				user_id: user.id,
 				notification: [`${user.username} vous a bloqué`],
-			} as res_block_friend));
+			} as res_block_user));
 		}
 	}
 }
 
-export const unBlockFriendRequest = async (ws: WebSocket, user: User, state: State, text: req_block_friend) => {
+export const unBlockFriend = async (ws: WebSocket, user: User, state: State, text: req_block_user) => {
 	const { user_id } = text;
 	if (!user_id) {
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Veuillez spécifier un id d\'utilisateur'] } as reponse));
 	}
 
-	const friend = state.user.get(user_id);
+	const friend = state.user.get(user_id) || await modelsUser.getUserById(user_id);
 
 	if (!userIsBlocked(ws, user, friend, state, false)) return;
 
-	let groupPrivMsg: Group | null = await modelsChat.createPrivateGroup(user, friend, state);
-	if (groupPrivMsg == null) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Erreur lors de la création du groupe privé'] } as reponse));
+	const relation = getRelationFriend(user.id, friend.id, state);
+	if (!relation) {
+		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Cet utilisateur n\'a pas de lien avec vous'] } as reponse));
 		return;
 	}
-	if (await modelsFriends.updateFriendRelation(user, friend, '', groupPrivMsg.id, state) == false) {
+	console.log('relation', relation);
+	if (relation.target === user.id) {
+		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Vous ne pouvez pas débloquer un utilisateur qui vous a bloqué'] } as reponse));
+		return;
+	}
+
+	if (await modelsFriends.updateFriendRelation(user, friend, '', false, state) == false) {
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: [`Erreur lors de la suppression du blocage de ${friend.username}`] } as reponse));
 		return;
 	}
 	ws.send(JSON.stringify({
-		action: 'unblock_friend',
+		action: 'unblock_user',
 		result: 'ok',
 		user_id: friend.id,
 		notification: [`Vous avez débloqué ${friend.username}`],
-	} as res_block_friend));
+	} as res_block_user));
 	if (friend.online) {
 		const wsFriend = state.onlineSockets.get(friend.id);
 		if (wsFriend) {
 			wsFriend.send(JSON.stringify({
-				action: 'unblock_friend',
+				action: 'unblock_user',
 				result: 'ok',
 				user_id: user.id,
 				notification: [`${user.username} vous a débloqué`],
-			} as res_block_friend));
+			} as res_block_user));
 		}
 	}
 }
 
 export default {
-	getConnectedFriends,
 	getFriends,
+	getRelationFriend,
 	userIsBlocked,
-	buildFriendsMap,
-	addFriendRequest,
-	acceptFriendRequest,
-	removeFriendRequest,
-	refuseFriendRequest,
-	cancelFriendRequest,
-	blockFriendRequest,
-	unBlockFriendRequest,
+	searchUser,
+	addFriend,
+	acceptFriend,
+	removeFriend,
+	refuseFriend,
+	cancelFriend,
+	blockFriend,
+	unBlockFriend,
 };
