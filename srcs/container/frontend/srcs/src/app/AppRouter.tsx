@@ -3,7 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 
 
 // import WebSocketTest from './users/WebSocketTest';
-import Chat from './users/Chat';
+import Chat from './UserTest';
 import { Pong } from './pongGame/client'
 import App from './App';
 
@@ -22,7 +22,7 @@ class AppRouter extends Component {
 				<Route>
 					<Route path="/" element={<App />} />
 					<Route path="/pong" element={<Pong />} />
-					<Route path="/WebSocketTest" element={<Chat />} />
+					<Route path="/userTest" element={<Chat />} />
 				</Route>
 
 			</Routes>

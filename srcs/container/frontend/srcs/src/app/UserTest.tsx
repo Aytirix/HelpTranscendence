@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
-import useSafeWebSocket from '../../api/useSafeWebSocket';
+import useSafeWebSocket from '../api/useSafeWebSocket';
 
 // === Theme Context ===
 const ThemeContext = createContext<{ dark: boolean; toggle: () => void }>({
@@ -380,15 +380,20 @@ export default function WebSocketChat() {
 					}))
 				);
 				setGroups(
-					groupsArr.map((g: any) => ({
-						id: g.id,
-						name: g.name,
-						members: g.members,
-						messages: g.messages || [],
-						owners_id: g.owners_id,
-						onlines_id: g.onlines_id,
-						private: g.private,
-					}))
+					groupsArr.map((g: any) => {
+						const msgs: Message[] = Array.isArray(g.messages)
+							? g.messages
+							: Object.values(g.messages || {});
+						return {
+							id: g.id,
+							name: g.name,
+							members: g.members,
+							messages: msgs,
+							owners_id: g.owners_id,
+							onlines_id: g.onlines_id,
+							private: g.private,
+						};
+					})
 				);
 				if (groupsArr.length > 0) {
 					setActiveId(groupsArr[0].id);
@@ -398,18 +403,30 @@ export default function WebSocketChat() {
 			}
 			case 'loadMoreMessage': {
 				const { group_id, messages } = data;
-				setGroups((prev) =>
-					prev.map((g) => (g.id === group_id ? { ...g, messages: [...messages, ...g.messages] } : g))
+				// messages peut arriver en objet ou tableau
+				const newMsgs: Message[] = Array.isArray(messages)
+					? messages
+					: Object.values(messages || {});
+				setGroups(prev =>
+					prev.map(g =>
+						g.id === group_id
+							? { ...g, messages: [...newMsgs, ...g.messages] }
+							: g
+					)
 				);
 				setLoadingHistory(false);
-				setHasMoreHistory(messages.length === PAGE_SIZE);
+				setHasMoreHistory(newMsgs.length === PAGE_SIZE);
 				break;
 			}
 			case 'new_message': {
 				const { group_id, message } = data;
 				if (message.sender_id === currentUserIdRef.current) return;
-				setGroups((prev) =>
-					prev.map((g) => (g.id === group_id ? { ...g, messages: [...g.messages, message] } : g))
+				setGroups(prev =>
+					prev.map(g =>
+						g.id === group_id
+							? { ...g, messages: [...g.messages, message] }
+							: g
+					)
 				);
 				break;
 			}
