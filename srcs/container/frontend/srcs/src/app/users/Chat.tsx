@@ -56,35 +56,62 @@ export default function Chat() {
 	// Gestion messages WS
 	const handleMessage = (data: any) => {
 		switch (data.action) {
-			case 'init_connected':
+			case 'init_connected': {
 				setCurrentUser(data.user);
 				currentUserIdRef.current = data.user.id;
 				setFriends(data.friends);
 				setPendingRequests(data.friends.filter((u: User) => u.relation?.status === 'pending'));
 				setBlockedUsers(data.friends.filter((u: User) => u.relation?.status === 'blocked'));
-				setGroups(Object.values(data.groups));
-				if (Object.values(data.groups).length) {
-					const first = (Object.values(data.groups) as { id: number }[])[0].id;
+
+				// On transforme chaque groupe pour que messages soit une Map
+				const groupsWithMaps: Group[] = Object.values(data.groups).map((g: any) => ({
+					...g,
+					messages: new Map<number, Message>(
+						// si g.messages est un array, mappez-le, sinon, []. Exemple : []
+						Array.isArray(g.messages)
+							? g.messages.map((m: Message) => [m.id, m])
+							: []
+					),
+				}));
+				setGroups(groupsWithMaps);
+
+				if (groupsWithMaps.length > 0) {
+					const first = groupsWithMaps[0].id;
 					setActiveId(first);
 					loadHistory(first, 0);
 				}
 				break;
-
-			case 'loadMoreMessage':
-				setGroups((prev) =>
-					prev.map((g) =>
-						g.id === data.group_id ? { ...g, messages: [...data.messages, ...g.messages] } : g
-					)
+			}
+			case 'loadMoreMessage': {
+				setGroups(prev =>
+				  prev.map(g =>
+					g.id === data.group_id
+					  ? {
+						  ...g,
+						  messages: new Map<number, Message>(
+							(Array.isArray(data.messages) ? data.messages : Object.values(data.messages))
+							  .map((m: any) => {
+								const date = new Date(m.sent_at);
+								return [m.id, { ...m, sent_at: date }];
+							  })
+						  ),
+						}
+					  : g
+				  )
 				);
-				setLoadingHistory(false);
-				setHasMoreHistory(data.messages.length === PAGE_SIZE);
+				// ...
 				break;
+			  }
 
 			case 'new_message':
 				if (data.message.sender_id !== currentUserIdRef.current) {
+					const messageWithDate = {
+						...data.message,
+						sent_at: new Date(data.message.sent_at),
+					};
 					setGroups((prev) =>
 						prev.map((g) =>
-							g.id === data.group_id ? { ...g, messages: [...g.messages, data.message] } : g
+							g.id === data.group_id ? { ...g, messages: new Map([...g.messages, [messageWithDate.id, messageWithDate]]) } : g
 						)
 					);
 				}
@@ -173,19 +200,44 @@ export default function Chat() {
 	useEffect(() => {
 		if (activeId !== null) {
 			const grp = groups.find((g) => g.id === activeId);
-			if (grp && grp.messages.length === 0) loadHistory(activeId, 0);
+			if (grp && grp.messages.size === 0) loadHistory(activeId, 0);
 		}
 	}, [activeId, groups]);
 
 	const sendMessage = () => {
 		if (activeId == null || !ws || ws.readyState !== WebSocket.OPEN) return;
 		const now = Date.now();
-		const newMsg: Message = { id: now, sender_id: currentUserIdRef.current!, message: input, sent_at: new Date(now) };
-		setGroups((prev) => prev.map((g) => (g.id === activeId ? { ...g, messages: [...g.messages, newMsg] } : g)));
+		const newMsg: Message = {
+			id: now,
+			sender_id: currentUserIdRef.current!,
+			message: input,
+			sent_at: new Date(now),
+		};
+
+		// Mise à jour du state
+		setGroups(prev =>
+			prev.map(g => {
+				if (g.id !== activeId) return g;
+
+				// Si ce n'est pas une Map, on la convertit en Map vide
+				const oldMap = g.messages instanceof Map ? g.messages : new Map<number, Message>();
+
+				return {
+					...g,
+					messages: new Map([
+						...oldMap.entries(),
+						[now, newMsg],
+					]),
+				};
+			})
+		);
+
+		// Envoi au serveur
 		ws.send(JSON.stringify({ action: 'new_message', group_id: activeId, message: input }));
 		setInput('');
 		setAtBottom(true);
 	};
+
 
 	const handleFriendAction = (u: any, action: string) => {
 		if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -195,13 +247,27 @@ export default function Chat() {
 			setAtBottom(true);
 		}
 	};
+	Map<number, Message>
+	const emptyGroup: Group = {
+		id: -1,
+		name: 'Sélectionnez une discussion',
+		members: [],
+		owners_id: [],
+		onlines_id: [],
+		messages: new Map<number, Message>(),  // <-- ici, Map vide
+		private: 0,
+	};
+	const activeGroup = groups.find((g) => g.id === activeId) ?? emptyGroup;
 
-	const activeGroup = groups.find((g) => g.id === activeId) || { id: -1, name: 'Sélectionnez une discussion', members: [], messages: [], private: 0 };
+	const handleSelectGroup = (groupId: number) => {
+		setActiveId(groupId);
+		setAtBottom(true);
+	};
 
 	return (
 		<div className={`flex h-screen ${dark ? 'dark' : ''}`}>
 			<aside className="w-80 p-6 bg-white dark:bg-gray-800 overflow-y-auto shadow-lg space-y-8">
-				<GroupList groups={groups} activeId={activeId} onSelect={(id) => { setActiveId(id); setAtBottom(true); }} currentUserId={currentUser?.id ?? null} />
+				<GroupList groups={groups} activeId={activeId} onSelect={handleSelectGroup} currentUserId={currentUser?.id ?? null} />
 				<SearchFriends onSearch={(name) => ws?.send(JSON.stringify({ action: 'search_user', name }))} results={searchResults} onAdd={(u) => handleFriendAction(u, 'add_friend')} onBlock={(u) => handleFriendAction(u, 'block_user')} />
 				<PendingRequests requests={pendingRequests} onAccept={(u) => handleFriendAction(u, 'accept_friend')} onRefuse={(u) => handleFriendAction(u, 'refuse_friend')} onCancel={(u) => handleFriendAction(u, 'cancel_request')} />
 				<FriendsList
@@ -220,15 +286,28 @@ export default function Chat() {
 				/>
 
 				<div className="relative flex-1 flex flex-col">
-					{hasMoreHistory && activeGroup.messages.length > 0 && (
-						<button onClick={() => loadHistory(activeGroup.id, activeGroup.messages[0].id)} disabled={loadingHistory} className="absolute top-2 left-1/2 -translate-x-1/2 bg-gray-200 p-2 rounded-full z-10 hover:bg-gray-300">
+					{hasMoreHistory && activeGroup.messages instanceof Map && activeGroup.messages.size > 0 && (
+						<button
+							onClick={() => {
+								if (activeGroup.messages instanceof Map) {
+									loadHistory(activeGroup.id, Math.min(...Array.from(activeGroup.messages.keys())));
+								}
+							}}
+							disabled={loadingHistory}
+							className="absolute top-2 left-1/2 -translate-x-1/2 bg-gray-200 p-2 rounded-full z-10 hover:bg-gray-300"
+						>
 							Charger anciens
 						</button>
 					)}
 
-					<MessageList messages={activeGroup.messages} currentUserId={currentUserIdRef.current} isLoading={loadingHistory} onScroll={setAtBottom} />
+					<MessageList messages={
+						activeGroup.messages instanceof Map
+							? Array.from(activeGroup.messages.values())
+								.sort((a, b) => a.sent_at.getTime() - b.sent_at.getTime())
+							: null
+					} currentUserId={currentUserIdRef.current} isLoading={loadingHistory} onScroll={setAtBottom} />
 
-					{!atBottom && activeGroup.messages.length > 0 && (
+					{!atBottom && activeGroup.messages instanceof Map && activeGroup.messages.size > 0 && (
 						<button onClick={() => setAtBottom(true)} className="absolute bottom-24 right-4 bg-blue-600 text-white p-2 rounded-full shadow-lg">
 							Nouveaux messages
 						</button>

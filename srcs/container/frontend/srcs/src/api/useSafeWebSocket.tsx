@@ -45,7 +45,7 @@ function useSafeWebSocket({ endpoint, onMessage, onStatusChange, reconnectDelay 
 				const data = JSON.parse(evt.data);
 				onMessage(data);
 			} catch {
-				console.error('WS parse error');
+				console.error('WS parse error :', evt.data);
 			}
 		};
 

@@ -30,7 +30,7 @@ export interface Group {
 	members: User[];
 	owners_id: number[];
 	onlines_id: number[];
-	messages: Message[];
+	messages: Map<number, Message>;
 	private: boolean;
 }
 

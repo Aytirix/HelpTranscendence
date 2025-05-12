@@ -24,14 +24,11 @@ async function initWebSocket(server: FastifyInstance) {
 			case '/chat':
 				chatWebSocket(wss, ws, user, req);
 				break;
-			case '/pong' :
+			case '/pong':
 				pongWebSocket(ws, user);
-				break; 
+				break;
 			default:
-				const errorMsg = 'Erreur : chemin WebSocket non reconnu.';
-				console.warn(`[WebSocket] ${errorMsg} URL demandée: ${path}`);
-				ws.send(JSON.stringify({ error: errorMsg }));
-				ws.close(1008, 'Chemin WebSocket invalide');
+				ws.close(1008 ,JSON.stringify({ action: 'error', result: 'error', notification: ['Erreur : chemin WebSocket non reconnu.'] }));
 				break;
 		}
 	});
@@ -51,7 +48,7 @@ async function initWebSocket(server: FastifyInstance) {
 		} catch (err) {
 			console.error('Erreur lors de la gestion de la connexion WebSocket:', err);
 			socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
-			socket.destroy(); 
+			socket.destroy();
 		}
 	});
 }

@@ -49,7 +49,7 @@ export interface req_addUserGroup {
 }
 
 export interface req_deleteGroup {
-	action: 'leave_group';
+	action: 'delete_group';
 	group_id: number;
 }
 
@@ -58,14 +58,20 @@ export interface req_leaveGroup {
 	group_id: number;
 }
 
-export interface res_addUserGroup {
-	action: 'add_user_group' | 'remove_user_group';
+export interface res_leaveGroup extends reponse {
+	action: 'leave_group';
 	group_id: number;
-	users_id: number;
+	user_id: number;
+}
+
+export interface res_addUserGroup extends reponse {
+	action: 'add_user_group';
+	group_id: number;
+	user: User;
 }
 
 //  l'api attend cette reponse pour un nouveau message
-export interface req_createGroup {
+export interface req_createGroup extends reponse {
 	action: 'create_group';
 	group_name: string;
 	users_id: number[];
@@ -88,7 +94,7 @@ export interface req_loadMoreMessage {
 export interface res_loadMoreMessage extends reponse {
 	action: 'loadMoreMessage';
 	group_id?: number;
-	messages?: Message[];
+	messages?: Record<number, Message>;
 }
 
 // Reponse : Envoyer le message que x c'est connecté a tous ces amis
@@ -164,6 +170,7 @@ export interface req_block_user {
 export interface res_block_user extends reponse {
 	action: 'block_user' | 'unblock_user';
 	user_id: number;
+	group_id: number;
 }
 
 export interface res_remove_friend extends reponse {

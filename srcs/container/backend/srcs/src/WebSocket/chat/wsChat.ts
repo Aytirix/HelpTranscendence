@@ -1,5 +1,5 @@
 import { Friends, Group, User } from '@types';
-import { State, request, req_loadMoreMessage, req_newMessage, res_pong, req_accept_friend, req_add_friend, req_remove_friend, req_refuse_friend, req_block_user, req_createGroup, req_addUserGroup, req_leaveGroup, req_deleteGroup, req_search_user } from '@typesChat';
+import { State, request, req_loadMoreMessage, req_newMessage, res_pong, req_accept_friend, req_add_friend, req_remove_friend, req_refuse_friend, req_block_user, req_createGroup, req_addUserGroup, req_leaveGroup, req_deleteGroup, req_search_user, reponse } from '@typesChat';
 import { IncomingMessage } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import modelsFriends from '@models/modelFriends';
@@ -25,13 +25,13 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 		try {
 			text = JSON.parse(message.toString().trim());
 		} catch (e) {
-			ws.send(/**1008,**/ 'Veuillez envoyer un message au format JSON'); // to close
+			ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Veuillez envoyer une réponse au format JSON'] })); // to close
 			return true;
 		}
 
 		const action = text.action;
 		if (!action) {
-			ws.send('Veuillez spécifier une action'); // to close
+			ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Veuillez spécifier une action'] })); // to close
 			return true;
 		}
 
@@ -53,7 +53,7 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 				break;
 			case 'add_user_to_group':
 				controllersChat.addUserGroup(ws, user, state, (text as req_addUserGroup));
-			case 'remove_user_from_group':
+			case 'remove_user_group':
 				controllersChat.removeUserGroup(ws, user, state, (text as req_addUserGroup));
 				break;
 			case 'leave_group':
@@ -62,7 +62,7 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 			case 'delete_group':
 				controllersChat.deleteGroup(ws, user, state, (text as req_deleteGroup));
 				break;
-			case 'search_user': // ok
+			case 'search_user':
 				controllerFriends.searchUser(ws, user, state, (text as req_search_user));
 				break;
 			case 'add_friend':
@@ -87,20 +87,20 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 				controllerFriends.unBlockFriend(ws, user, state, (text as req_block_user));
 				break;
 			default:
-				ws.send(/**1008,**/ 'Action non reconnue'); // to close
+				ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Action non reconnue'] })); // to close
 				break;
 		}
 
-		ws.send(JSON.stringify({
-			action: 'state',
-			state: {
-				groups: mapToObject(state.groups),
-				friends: state.friends,
-				users_connected: mapToObject(state.user),
-				user: user,
-				lenOnlineSockets: state.onlineSockets.size,
-			}
-		}));
+		// ws.send(JSON.stringify({
+		// 	action: 'state',
+		// 	state: {
+		// 		groups: mapToObject(state.groups),
+		// 		friends: state.friends,
+		// 		users_connected: mapToObject(state.user),
+		// 		user: user,
+		// 		lenOnlineSockets: state.onlineSockets.size,
+		// 	}
+		// }));
 	});
 
 	ws.on('close', () => {
@@ -112,7 +112,7 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 		controllersChat.removeOnlineUser(state, user);
 		console.error('Erreur WebSocket:', error);
 		if (ws.readyState === WebSocket.OPEN) {
-			ws.close(1008, 'Erreur WebSocket');
+			ws.close(1008, JSON.stringify({ action: 'error', result: 'error', notification: ['Erreur WebSocket'] }));
 		}
 	});
 }

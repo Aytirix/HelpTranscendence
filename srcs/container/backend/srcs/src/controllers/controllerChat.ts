@@ -1,5 +1,5 @@
 import { Friends, Group, Message, User } from '@types';
-import { send_friend_connected, res_disconnect, req_newMessage, res_newMessage, State, send_init_connected, req_loadMoreMessage, res_loadMoreMessage, reponse, req_createGroup, res_createGroup, req_addUserGroup, res_addUserGroup, req_leaveGroup, req_deleteGroup } from '@typesChat';
+import { send_friend_connected, res_disconnect, req_newMessage, res_newMessage, State, send_init_connected, req_loadMoreMessage, res_loadMoreMessage, reponse, req_createGroup, res_createGroup, req_addUserGroup, res_addUserGroup, req_deleteGroup, req_leaveGroup, res_leaveGroup } from '@typesChat';
 import { WebSocketServer, WebSocket } from 'ws';
 import modelsChat from '@models/modelChat';
 import modelsFriends from '@models/modelFriends';
@@ -96,6 +96,19 @@ export const removeOnlineUser = (state: State, user: User) => {
 	);
 };
 
+export const BlockedUserId = (user: User, state: State) => {
+	const blockedUsers = Array.from(state.friends.values()).filter(friend => (friend.user_one_id === user.id || friend.user_two_id === user.id) && friend.status === 'blocked');
+	const blockedUserIds = blockedUsers.map(friend => friend.user_one_id === user.id ? friend.user_two_id : friend.user_one_id);
+	return blockedUserIds;
+}
+
+export const filterBlockedUserMessages = (messages: Map<number, Message>, user: User, state: State): Map<number, Message> => {
+	const blockedUserIds = BlockedUserId(user, state);
+	return new Map(Array.from(messages.values())
+		.filter(message => !blockedUserIds.includes(message.sender_id))
+		.map(message => [message.id, message]));
+}
+
 export const init_connexion = async (ws: WebSocket, user: User, state: State) => {
 	console.log('Nouvelle connexion de l\'utilisateur:', user.id);
 	addOnlineUser(state, ws, user);
@@ -110,6 +123,7 @@ export const init_connexion = async (ws: WebSocket, user: User, state: State) =>
 	const userGroups = new Map(
 		Array.from(state.groups.entries()).filter(([_, group]: [number, Group]) => {
 			let isFriend = false;
+			group.messages = filterBlockedUserMessages(group.messages, user, state);
 			for (const member of group.members) {
 				if (member.id !== user.id) {
 					const relation = controllerFriends.getRelationFriend(user.id, member.id, state);
@@ -150,17 +164,8 @@ export const newMessage = async (ws: WebSocket, user: User, state: State, req: r
 	if (!group) return;
 
 	if (!userInGroup(ws, user, group)) return;
-
-	// stockage du message dans la base de données
-	if (!req.message) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Message manquant'] } as reponse));
-		return;
-	}
-
-	if (req.message.length > 1000) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Message trop long'] } as reponse));
-		return;
-	}
+	if (!req.message || req.message.length < 1) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Message manquant'] } as reponse));
+	if (req.message.length > 1000) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Message trop long'] } as reponse));
 
 	const newMessage = await modelsChat.newMessage(group, user, req.message, sentAtDate);
 	if (!newMessage) {
@@ -168,7 +173,7 @@ export const newMessage = async (ws: WebSocket, user: User, state: State, req: r
 		return;
 	}
 
-	group.messages.push(newMessage);
+	group.messages.set(newMessage.id, newMessage);
 	const messageToSend: res_newMessage = {
 		action: 'new_message',
 		result: 'ok',
@@ -176,7 +181,9 @@ export const newMessage = async (ws: WebSocket, user: User, state: State, req: r
 		message: newMessage,
 	};
 
+	const listUserIdBlocked = BlockedUserId(user, state);
 	group.members.forEach((member: User) => {
+		if (listUserIdBlocked.includes(member.id)) return;
 		const wsMember = state.onlineSockets.get(member.id);
 		if (wsMember && wsMember.readyState === WebSocket.OPEN) {
 			wsMember.send(JSON.stringify(messageToSend));
@@ -187,74 +194,50 @@ export const newMessage = async (ws: WebSocket, user: User, state: State, req: r
 export const loadMoreMessage = async (ws: WebSocket, user: User, state: State, req: req_loadMoreMessage) => {
 	const group = groupExists(ws, state, req.group_id);
 	if (!group) return;
-
 	if (!userInGroup(ws, user, group)) return;
+	if (req.firstMessageId < 0) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['ID du message manquant'] } as reponse));
+	if (req.firstMessageId > 0 && !group.messages.has(req.firstMessageId)) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Message non trouvé'] } as reponse));
 
-	if (req.firstMessageId < 0) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['ID du message manquant'] } as reponse));
-		return;
-	}
+	const listUserIdBlocked = BlockedUserId(user, state);
 
-	let index = 0;
-
-	if (req.firstMessageId > 0) {
-		// verifier si le firstMessageId est dans le groupe
-		index = group.messages.findIndex((message: Message) => message.id === req.firstMessageId);
-		if (index === -1) {
-			ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Message non trouvé'] } as reponse));
-			return;
-		}
-	}
+	let messagesFiltered = filterBlockedUserMessages(group.messages, user, state);
 
 	// voir combien il y a de message avant le lastMessage deja recuperer de la db
-	const messagesToGet = group.messages.slice(0, index);
-	let messages: any[] = [];
-	if (messagesToGet.length >= 20) {
-		messages = messagesToGet.slice(index + 1, index + 20);
-	} else {
-		const messagesFromDb = await modelsChat.getMessagesFromGroup(group, 20);
-		messages = messagesToGet.concat(messagesFromDb);
+	const messagesToGet: Map<number, Message> = new Map(
+		Array.from(messagesFiltered.entries()).filter(([_, message]: [number, Message]) => {
+			if (req.firstMessageId === 0 || message.id < req.firstMessageId) return true;
+			return false;
+		}));
+	let messages: Map<number, Message>;
+	if (messagesToGet.size >= 20) messages = new Map(Array.from(messagesToGet.entries()).slice(0, 20));
+	else {
+		const messagesFromDb = await modelsChat.getMessagesFromGroup(group, 20 - messagesToGet.size, listUserIdBlocked);
+		messages = new Map([...messagesToGet, ...messagesFromDb]);
 	}
-	ws.send(JSON.stringify({ action: 'loadMoreMessage', result: 'ok', group_id: group.id, messages: messages } as res_loadMoreMessage));
+	ws.send(JSON.stringify({ action: 'loadMoreMessage', result: 'ok', group_id: group.id, messages: mapToObject(messages) } as res_loadMoreMessage));
 }
 
 export const createGroup = async (ws: WebSocket, user: User, state: State, req: req_createGroup) => {
-	if (!req.group_name) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Nom de groupe manquant ou trop long'] } as reponse));
-		return;
-	}
-	if (req.group_name.length > 25) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Nom de groupe trop long, 25 caractères maximum'] } as reponse));
-		return;
-	}
-	if (req.users_id.length < 1) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Vous devez ajouter au moins un utilisateur au groupe'] } as reponse));
-		return;
-	}
+	if (!req.group_name) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Nom de groupe manquant ou trop long'] } as reponse));
+	if (req.group_name.length > 25) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Nom de groupe trop long, 25 caractères maximum'] } as reponse));
+	if (req.users_id.length < 1) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Vous devez ajouter au moins un utilisateur au groupe'] } as reponse));
+
 	req.users_id = req.users_id.filter((id: number) => id !== user.id);
 	const users: User[] = [];
 	for (const userId of req.users_id) {
 		const userToAdd = state.user.get(userId) || await modelUser.getUserById(userId);
-		if (!userToAdd) {
-			ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Utilisateur non trouvé'] } as reponse));
-			return;
-		}
+		if (!userToAdd) continue;
 		let relation: Friends | undefined;
 		state.friends.forEach(friend => {
 			if ((friend.user_one_id === user.id && friend.user_two_id === userId) ||
-				(friend.user_one_id === userId && friend.user_two_id === user.id)) {
-				relation = friend;
-			}
+				(friend.user_one_id === userId && friend.user_two_id === user.id)) relation = friend;
 		});
-		if (!relation || relation.status !== 'blocked') {
-			users.push(userToAdd);
-		}
+		if (!relation || relation.status !== 'blocked') users.push(userToAdd);
 	}
 	const group = await modelsChat.createPublicGroup(user, req.group_name, users, state);
-	if (!group) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Erreur lors de la création du groupe'] } as reponse));
-		return;
-	}
+
+	if (!group) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Erreur lors de la création du groupe'] } as reponse));
+
 	group.members.push(user);
 	ws.send(JSON.stringify({ action: 'create_group', result: 'ok', group: group, notification: [`Vous avez créé le groupe ${group.name}`] } as res_createGroup));
 	for (const user of users) {
@@ -294,14 +277,14 @@ export const addUserGroup = async (ws: WebSocket, user: User, state: State, req:
 		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: [`Erreur lors de l\'ajout de l\'utilisateur ${userToAdd.username} au groupe`] } as reponse));
 		return;
 	}
-	ws.send(JSON.stringify({ action: 'add_user_group', result: 'ok', group_id: group.id, users_id: userToAdd.id, notification: [`Vous avez ajouté ${userToAdd.username} au groupe ${group.name}`] } as res_addUserGroup));
+	ws.send(JSON.stringify({ action: 'add_user_group', result: 'ok', group_id: group.id, user: userToAdd, notification: [`Vous avez ajouté ${userToAdd.username} au groupe ${group.name}`] } as res_addUserGroup));
 
 	// Envoi de la notification à tout les membres du groupe sauf l'utilisateur qui a ajouté
 	group.members.forEach((member: User) => {
 		if (member.id !== userToAdd.id && member.id !== user.id) {
 			const wsMember = state.onlineSockets.get(member.id);
 			if (wsMember && wsMember.readyState === WebSocket.OPEN) {
-				wsMember.send(JSON.stringify({ action: 'add_user_group', result: 'ok', group_id: group.id, users_id: userToAdd.id, notification: [`${user.username} a été ajouté au groupe ${group.name}`] } as res_addUserGroup));
+				wsMember.send(JSON.stringify({ action: 'add_user_group', result: 'ok', group_id: group.id, user: userToAdd, notification: [`${user.username} a été ajouté au groupe ${group.name}`] } as res_addUserGroup));
 			}
 		}
 	});
@@ -318,35 +301,29 @@ export const removeUserGroup = async (ws: WebSocket, user: User, state: State, r
 
 	if (!userIsOwnerGroup(ws, user, group)) return;
 
-	if (!req.user_id) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['ID de l\'utilisateur manquant'] } as reponse));
-		return;
-	}
+	if (!req.user_id) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['ID de l\'utilisateur manquant'] } as reponse));
+	
 	const userToRemove = state.user.get(req.user_id) || await modelUser.getUserById(req.user_id);
-	if (!userToRemove) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Utilisateur non trouvé'] } as reponse));
-		return;
-	}
+	if (!userToRemove) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Utilisateur non trouvé'] } as reponse));
+
 	const added = await modelsChat.removeUserFromGroup(group, userToRemove);
-	if (!added) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: [`Erreur lors de la suppresion de l\'utilisateur ${userToRemove.username} au groupe ${group.name}`] } as reponse));
-		return;
-	}
-	ws.send(JSON.stringify({ action: 'remove_user_group', result: 'ok', group_id: group.id, users_id: userToRemove.id, notification: [`Vous avez supprimé ${userToRemove.username} du groupe ${group.name}`] } as res_addUserGroup));
+	if (!added) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: [`Erreur lors de la suppresion de l\'utilisateur ${userToRemove.username} au groupe ${group.name}`] } as reponse));
+	
+	ws.send(JSON.stringify({ action: 'leave_group', result: 'ok', group_id: group.id, user_id: userToRemove.id, notification: [`Vous avez supprimé ${userToRemove.username} du groupe ${group.name}`] } as res_leaveGroup));
 
 	// Envoi de la notification à tout les membres du groupe sauf l'utilisateur qui a ajouté
 	group.members.forEach((member: User) => {
 		if (member.id !== userToRemove.id && member.id !== user.id) {
 			const wsMember = state.onlineSockets.get(member.id);
 			if (wsMember && wsMember.readyState === WebSocket.OPEN) {
-				wsMember.send(JSON.stringify({ action: 'remove_user_group', result: 'ok', group_id: group.id, users_id: userToRemove.id, notification: [`${user.username} a été supprimé  du groupe ${group.name}`] } as res_addUserGroup));
+				wsMember.send(JSON.stringify({ action: 'leave_group', result: 'ok', group_id: group.id, user_id: userToRemove.id, notification: [`${user.username} a été supprimé  du groupe ${group.name}`] } as res_leaveGroup));
 			}
 		}
 	});
 
 	const wsMember = state.onlineSockets.get(userToRemove.id);
 	if (wsMember && wsMember.readyState === WebSocket.OPEN) {
-		wsMember.send(JSON.stringify({ action: 'remove_user_group', result: 'ok', group_id: group.id, users_id: userToRemove.id, notification: [`${user.username} vous a supprimé du groupe ${group.name}`] } as res_addUserGroup));
+		wsMember.send(JSON.stringify({ action: 'leave_group', result: 'ok', group_id: group.id, user_id: userToRemove.id, notification: [`${user.username} vous a supprimé du groupe ${group.name}`] } as res_leaveGroup));
 	}
 }
 
@@ -357,17 +334,15 @@ export const leaveGroup = async (ws: WebSocket, user: User, state: State, req: r
 	if (!userInGroup(ws, user, group)) return;
 
 	const added = await modelsChat.removeUserFromGroup(group, user);
-	if (!added) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: [`Erreur pour vous retirer du groupe ${group.name}`] } as reponse));
-		return;
-	}
-	ws.send(JSON.stringify({ action: 'remove_user_group', result: 'ok', group_id: group.id, users_id: user.id, notification: [`Vous avez quitté le groupe ${group.name}`] } as res_addUserGroup));
+	if (!added) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: [`Erreur pour vous retirer du groupe ${group.name}`] } as reponse));
+
+	ws.send(JSON.stringify({ action: 'leave_group', result: 'ok', group_id: group.id, user_id: user.id, notification: [`Vous avez quitté le groupe ${group.name}`] } as res_leaveGroup));
 
 	group.members.forEach((member: User) => {
 		if (member.id !== user.id) {
 			const wsMember = state.onlineSockets.get(member.id);
 			if (wsMember && wsMember.readyState === WebSocket.OPEN) {
-				wsMember.send(JSON.stringify({ action: 'remove_user_group', result: 'ok', group_id: group.id, users_id: user.id, notification: [`${user.username} a quitté le groupe ${group.name}`] } as res_addUserGroup));
+				wsMember.send(JSON.stringify({ action: 'leave_group', result: 'ok', group_id: group.id, user_id: user.id, notification: [`${user.username} a quitté le groupe ${group.name}`] } as res_leaveGroup));
 			}
 		}
 	});
@@ -379,23 +354,18 @@ export const deleteGroup = async (ws: WebSocket, user: User, state: State, req: 
 
 	if (!userIsOwnerGroup(ws, user, group)) return;
 
-	if (group.private) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Vous ne pouvez pas supprimer un groupe privé'] } as reponse));
-		return;
-	}
+	if (group.private) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Vous ne pouvez pas supprimer un groupe privé'] } as reponse));
 
 	const del = await modelsChat.deleteGroup(group.id, state);
-	if (!del) {
-		ws.send(JSON.stringify({ action: 'error', result: 'error', notification: [`Erreur pour supprimer le groupe ${group.name}`] } as reponse));
-		return;
-	}
-	ws.send(JSON.stringify({ action: 'remove_user_group', result: 'ok', group_id: group.id, users_id: user.id, notification: [`Le groupe ${group.name} a été supprimé`] } as res_addUserGroup));
+	if (!del) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: [`Erreur pour supprimer le groupe ${group.name}`] } as reponse));
+
+	ws.send(JSON.stringify({ action: 'leave_group', result: 'ok', group_id: group.id, user_id: user.id, notification: [`Le groupe ${group.name} a été supprimé`] } as res_leaveGroup));
 
 	group.members.forEach((member: User) => {
 		if (member.id !== user.id) {
 			const wsMember = state.onlineSockets.get(member.id);
 			if (wsMember && wsMember.readyState === WebSocket.OPEN) {
-				wsMember.send(JSON.stringify({ action: 'remove_user_group', result: 'ok', group_id: group.id, users_id: user.id, notification: [`${user.username} a supprimé le groupe ${group.name}`] } as res_addUserGroup));
+				wsMember.send(JSON.stringify({ action: 'leave_group', result: 'ok', group_id: group.id, user_id: user.id, notification: [`${user.username} a supprimé le groupe ${group.name}`] } as res_leaveGroup));
 			}
 		}
 	});

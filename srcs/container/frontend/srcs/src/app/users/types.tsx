@@ -28,7 +28,7 @@ export interface Group {
 	members: User[];
 	owners_id: number[];
 	onlines_id: number[];
-	messages: Message[];
+	messages: Map<number, Message>;
 	private: 0 | 1;
 }
 
@@ -121,7 +121,7 @@ export interface req_loadMoreMessage {
 export interface res_loadMoreMessage extends reponse {
 	action: 'loadMoreMessage';
 	group_id?: number;
-	messages?: Message[];
+	messages?: Map<number, Message>;
 }
 
 // Reponse : Envoyer le message que x c'est connecté a tous ces amis

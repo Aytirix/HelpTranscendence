@@ -28,7 +28,7 @@ async function getAllGroupsFromUser(user: User, state: State) {
 				members: [],
 				owners_id: user.id === group.owner ? [user.id] : [],
 				onlines_id: [user.id],
-				messages: [],
+				messages: new Map<number, Message>(),
 				private: group.private,
 			};
 			await getAllUserFromGroup(grp);
@@ -58,43 +58,56 @@ async function getAllUserFromGroup(group: Group) {
 	});
 }
 
-async function getMessagesFromGroup(group: Group, limit: number = 20) {
-	const firstMessageId = group.messages.length > 0 ? group.messages[0].id : null;
+async function getMessagesFromGroup(
+	group: Group,
+	limit: number = 20,
+	ignoreUserId: number[] = []
+): Promise<Map<number, Message>> {
+	let collected: Map<number, Message> = new Map();
+	let allFetched: Map<number, Message> = new Map();
+	let lastId = (group.messages && group.messages.size > 0) ? Math.min(...group.messages.keys()) : null;
+	const batchSize = Math.max(limit * 2, 50);
 
-	const sql = `
-	  SELECT id, sender_id, message, sent_at
-	  FROM (
-		SELECT *
+	while (collected.size < limit) {
+		const sql = `
+		SELECT id, sender_id, message, sent_at
 		FROM group_messages
 		WHERE group_id = ?
-		  ${firstMessageId ? 'AND id < ?' : ''}
+		  ${lastId ? 'AND id < ?' : ''}
 		ORDER BY sent_at DESC
 		LIMIT ?
-	  ) AS sub
-	  ORDER BY sent_at ASC
-	`;
+	  `;
+		const params = lastId
+			? [group.id, lastId, batchSize]
+			: [group.id, batchSize];
+		const rows = await executeReq(sql, params) as any[];
 
-	const params = firstMessageId
-		? [group.id, firstMessageId, limit]
-		: [group.id, limit];
+		if (rows.length === 0) {
+			break;
+		}
 
-	const rows: any =
-		await executeReq(sql, params);
-
-	if (rows.length === 0) {
-		return [];
+		for (const r of rows) {
+			const msg: Message = {
+				id: r.id,
+				sender_id: r.sender_id,
+				message: r.message,
+				sent_at: new Date(r.sent_at),
+			};
+			allFetched.set(msg.id, msg);
+			if (!ignoreUserId.includes(msg.sender_id) && collected.size < limit) {
+				collected.set(msg.id, msg);
+			}
+		}
+		lastId = rows[rows.length - 1].id;
 	}
-
-	const newMessages: Message[] = rows.map(r => ({
-		id: r.id,
-		sender_id: r.sender_id,
-		message: r.message,
-		sent_at: new Date(r.sent_at),
-	}));
-
-	group.messages = [...newMessages, ...group.messages];
-
-	return newMessages;
+	// ajouter les messages dans le groupe
+	for (const msg of allFetched.values()) {
+		if (!group.messages.has(msg.id)) {
+			console.log('add message', msg.id);
+			group.messages.set(msg.id, msg);
+		}
+	}
+	return collected;
 }
 
 
@@ -128,7 +141,7 @@ async function createPublicGroup(user: User, name: string, list_users: User[], s
 		members: [],
 		owners_id: [],
 		onlines_id: [],
-		messages: [],
+		messages: new Map<number, Message>(),
 		private: false,
 	};
 	group.id = result2.insertId;
@@ -195,7 +208,7 @@ async function createPrivateGroup(user: User, friend: User, state: State): Promi
 			members: [user, friend],
 			owners_id: [user.id, friend.id],
 			onlines_id: [user.id, ...(friend.online ? [friend.id] : [])],
-			messages: [],
+			messages: new Map<number, Message>(),
 			private: true,
 		};
 		state.groups.set(groupId, group2);
@@ -215,7 +228,7 @@ async function createPrivateGroup(user: User, friend: User, state: State): Promi
 		members: [],
 		owners_id: [],
 		onlines_id: [],
-		messages: [],
+		messages: new Map<number, Message>(),
 		private: true,
 	};
 	state.groups.set(groupId, group);
