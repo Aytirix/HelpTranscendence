@@ -1,6 +1,7 @@
 import { Group, Message, User } from '@types';
 import executeReq from '@models/database';
 import { State } from '@typesChat';
+import controllerFriends from '@controllers/controllerFriends';
 
 async function getAllGroupsFromUser(user: User, state: State) {
 	const query = `SELECT g.*, gu.owner FROM groups AS g JOIN group_users AS gu ON gu.group_id = g.id WHERE gu.user_id = ?`;
@@ -103,7 +104,6 @@ async function getMessagesFromGroup(
 	// ajouter les messages dans le groupe
 	for (const msg of allFetched.values()) {
 		if (!group.messages.has(msg.id)) {
-			console.log('add message', msg.id);
 			group.messages.set(msg.id, msg);
 		}
 	}
@@ -145,10 +145,10 @@ async function createPublicGroup(user: User, name: string, list_users: User[], s
 		private: false,
 	};
 	group.id = result2.insertId;
-	addUserToGroup(group, user, true);
+	await addUserToGroup(group, user, state, true);
 	for (const user of list_users) {
-		if (!addUserToGroup(group, user)) {
-			deleteGroup(group.id, state);
+		if (! await addUserToGroup(group, user, state)) {
+			await deleteGroup(group.id, state);
 			return null;
 		}
 	}
@@ -156,7 +156,7 @@ async function createPublicGroup(user: User, name: string, list_users: User[], s
 	return group;
 }
 
-async function addUserToGroup(group: Group, user: User, isOwner: boolean = false): Promise<boolean> {
+async function addUserToGroup(group: Group, user: User, state: State, isOwner: boolean = false): Promise<boolean> {
 	const query = `INSERT INTO group_users (group_id, user_id, owner) VALUES (?, ?, ?)`;
 	const result: any = await executeReq(query, [group.id, user.id, isOwner ? 1 : 0]);
 	if (result.affectedRows === 0) {
@@ -165,7 +165,7 @@ async function addUserToGroup(group: Group, user: User, isOwner: boolean = false
 	if (!group.members.some((member: User) => member.id === user.id)) {
 		group.members.push(user);
 	}
-	if (!group.onlines_id.includes(user.id)) {
+	if (controllerFriends.userIsConnected(user, state) && !group.onlines_id.includes(user.id)) {
 		group.onlines_id.push(user.id);
 	}
 	if (isOwner && !group.owners_id.includes(user.id)) {
@@ -232,8 +232,8 @@ async function createPrivateGroup(user: User, friend: User, state: State): Promi
 		private: true,
 	};
 	state.groups.set(groupId, group);
-	if (!addUserToGroup(group, user, true) || !addUserToGroup(group, friend, true)) {
-		deleteGroup(group.id, state);
+	if (! await addUserToGroup(group, user, state, true) || ! await addUserToGroup(group, friend, state, true)) {
+		await deleteGroup(group.id, state);
 		return null;
 	}
 	return group;

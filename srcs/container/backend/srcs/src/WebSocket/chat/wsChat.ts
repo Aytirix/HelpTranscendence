@@ -42,17 +42,18 @@ async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, re
 				};
 				ws.send(JSON.stringify(pong));
 				break;
-			case 'new_message': // ok
+			case 'new_message':
 				controllersChat.newMessage(ws, user, state, (text as req_newMessage));
 				break;
-			case 'loadMoreMessage': // ok
+			case 'loadMoreMessage':
 				controllersChat.loadMoreMessage(ws, user, state, (text as req_loadMoreMessage));
 				break;
 			case 'create_group':
 				controllersChat.createGroup(ws, user, state, (text as req_createGroup));
 				break;
-			case 'add_user_to_group':
+			case 'add_user_group':
 				controllersChat.addUserGroup(ws, user, state, (text as req_addUserGroup));
+				break;
 			case 'remove_user_group':
 				controllersChat.removeUserGroup(ws, user, state, (text as req_addUserGroup));
 				break;

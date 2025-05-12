@@ -138,6 +138,7 @@ export interface res_refuse_friend extends reponse {
 export interface req_search_user {
 	action: 'search_user';
 	name: string;
+	group_id?: number;
 }
 
 export interface res_search_user {

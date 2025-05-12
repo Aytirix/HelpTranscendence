@@ -5,6 +5,17 @@ import modelsChat from '@models/modelChat';
 import modelsFriends from '@models/modelFriends';
 import modelsUser from '@models/modelUser';
 import { IncomingMessage } from 'http';
+import controllerChat from './controllerChat';
+
+export const userIsConnected = (user: User, state: State): boolean => {
+	if (user && user.id && state.onlineSockets.has(user.id)) {
+		const ws = state.onlineSockets.get(user.id);
+		if (ws && ws.readyState === ws.OPEN) {
+			return true;
+		}
+	}
+	return false;
+}
 
 export async function getFriends(userId: number, state: State): Promise<User[]> {
 	const friendsIds = await modelsFriends.getFriendsForUser(userId, state);
@@ -66,7 +77,7 @@ export function userIsBlocked(ws: WebSocket, user: User, friend: User, state: St
 }
 
 export const searchUser = async (ws: WebSocket, user: User, state: State, text: req_search_user) => {
-	const { name } = text;
+	const { name, group_id } = text;
 	let users: User[] = [];
 	if (name && name.length >= 3 && name.length <= 15) {
 		users = await modelsUser.searchUser(name);
@@ -77,17 +88,20 @@ export const searchUser = async (ws: WebSocket, user: User, state: State, text: 
 
 	// filtrer les utilisateurs pour ne pas afficher l'utilisateur lui-même et ceux qui sont déjà amis
 	users = users.filter((userSearch) => {
+		const relation = getRelationFriend(user.id, userSearch.id, state);
 		if (userSearch.id === user.id) return false;
-		let relation: Friends | undefined;
-		for (const [, friend] of state.friends) {
-			if ((friend.user_one_id === user.id && friend.user_two_id === userSearch.id) ||
-				(friend.user_one_id === userSearch.id && friend.user_two_id === user.id)) {
-				relation = friend;
-				break;
-			}
+		if (group_id) {
+			const group = controllerChat.groupExists(ws, state, group_id);
+			if (!group) return false;
+			if (!controllerChat.userIsOwnerGroup(ws, user, group)) return false;
+			if (!controllerChat.userInGroup(ws, user, group)) return false;
+			if (!controllerChat.userInGroup(ws, user, group)) return false;
+			if (controllerChat.userInGroup(ws, userSearch, group)) return false;
+			if (relation && relation.status === 'blocked') return false;
 		}
-		if (relation && relation.status != '') {
-			return false;
+		else {
+			// enlever les utilisateurs ou il y a une relation.
+			if (relation && relation.status != '') return false;
 		}
 		return true;
 	});
@@ -106,11 +120,14 @@ export const addFriend = async (ws: WebSocket, user: User, state: State, text: r
 		return;
 	}
 
+
 	const friend = state.user.get(user_id) || await modelsUser.getUserById(user_id);
+	console.log('user.id :', user.id, 'friend.id :', friend.id);
 	if (!friend) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Cet utilisateur n\'existe pas'] } as reponse));
 	if (friend.id === user.id) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Vous ne pouvez pas faire une demande d\'ami à vous-même'] } as reponse));
 
-	const relation = getRelationFriend(user.id, user_id, state);
+	const relation = getRelationFriend(user.id, friend.id, state);
+	console.log('relation :', relation);
 
 	if (relation) {
 		switch (relation.status) {
@@ -127,10 +144,10 @@ export const addFriend = async (ws: WebSocket, user: User, state: State, text: r
 				return;
 			case 'pending':
 				if (relation.target === user.id) {
-					ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Vous avez déjà envoyé une demande d\'ami à cet utilisateur'] } as reponse));
+					ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Cet utilisateur vous a déjà envoyé une demande d\'ami'] } as reponse));
 				}
 				else if (relation.target === friend.id) {
-					ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Cet utilisateur vous a déjà envoyé une demande d\'ami'] } as reponse));
+					ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Vous avez déjà envoyé une demande d\'ami à cet utilisateur'] } as reponse));
 				}
 				return;
 		}
@@ -407,6 +424,7 @@ export const unBlockFriend = async (ws: WebSocket, user: User, state: State, tex
 }
 
 export default {
+	userIsConnected,
 	getFriends,
 	getRelationFriend,
 	userIsBlocked,
