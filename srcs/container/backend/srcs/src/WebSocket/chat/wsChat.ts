@@ -18,7 +18,7 @@ const state: State = {
 	state.friends = await modelsFriends.loadAllFriendRelationsFromDB();
 })();
 
-async function chatWebSocket(wss: WebSocketServer, ws: WebSocket, user: User, req: IncomingMessage): Promise<void> {
+async function chatWebSocket(ws: WebSocket, user: User, req: IncomingMessage): Promise<void> {
 	controllersChat.init_connexion(ws, user, state);
 	ws.on('message', (message: Buffer) => {
 		let text: request | null = null;

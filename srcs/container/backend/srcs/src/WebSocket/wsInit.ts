@@ -9,6 +9,7 @@ import Middleware from '@Middleware';
 import chatWebSocket from './chat/wsChat';
 import { User } from '@types';
 import { pongWebSocket } from './pongGame/pongSocketHandler';
+import { PacManWebSocket } from './Pacman/PacManWebSocket';
 
 let wss: WebSocketServer | null = null;
 
@@ -22,10 +23,13 @@ async function initWebSocket(server: FastifyInstance) {
 
 		switch (path) {
 			case '/chat':
-				chatWebSocket(wss, ws, user, req);
+				chatWebSocket(ws, user, req);
 				break;
 			case '/pong':
 				pongWebSocket(ws, user);
+				break;
+			case '/Pacman':
+				PacManWebSocket(ws, user);
 				break;
 			default:
 				ws.close(1008 ,JSON.stringify({ action: 'error', result: 'error', notification: ['Erreur : chemin WebSocket non reconnu.'] }));

@@ -8,6 +8,7 @@ function App() {
 	return (
 		<>
 			<nav className="flex flex-col gap-4">
+				<Link to="/Pacman">Pacman</Link>
 				<Link to="/WebSocketTest">userTest</Link>
 				<Link to="/Pong">pong tests</Link>
 			</nav>

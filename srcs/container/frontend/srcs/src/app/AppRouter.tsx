@@ -5,6 +5,7 @@ import { Routes, Route } from 'react-router-dom';
 // import WebSocketTest from './users/WebSocketTest';
 import Chat from './UserTest';
 import { Pong } from './pongGame/client'
+import WebSocketPacman from './Pacman/Init'
 import App from './App';
 
 // PAGES
@@ -22,6 +23,7 @@ class AppRouter extends Component {
 				<Route>
 					<Route path="/" element={<App />} />
 					<Route path="/pong" element={<Pong />} />
+					<Route path="/Pacman" element={<WebSocketPacman />} />
 					<Route path="/userTest" element={<Chat />} />
 				</Route>
 
