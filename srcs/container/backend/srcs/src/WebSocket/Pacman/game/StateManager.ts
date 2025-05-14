@@ -13,10 +13,11 @@ class RoomManager {
 		return RoomManager.instance;
 	}
 
-	public createRoom(player: player): room {
-		if (this.PlayerIsRoom(player)) return;
+	public createRoom(player: player, name: string): room {
+		if (this.PlayerInRoom(player)) return;
 		const game: room = {
 			id: Date.now() + Math.floor(Math.random() * 1000),
+			name: name,
 			owner_id: player.id,
 			players: [player],
 			state: 'waiting',
@@ -25,7 +26,7 @@ class RoomManager {
 		return game;
 	}
 
-	public PlayerIsRoom(player: player): boolean {
+	public PlayerInRoom(player: player): boolean {
 		for (const game of this.rooms.values()) {
 			if (game.players.some(p => p.id === player.id)) {
 				return true;
@@ -35,7 +36,7 @@ class RoomManager {
 	}
 
 	public addPlayerToRoom(roomId: number, player: player): void {
-		if (this.PlayerIsRoom(player)) return;
+		if (this.PlayerInRoom(player)) return;
 		const game = this.getRoom(roomId);
 		if (game && game.players.length < 5) {
 			game.players.push(player);
@@ -98,6 +99,15 @@ class RoomManager {
 		return Array.from(this.rooms.values()).filter(game => game.state === 'active');
 	}
 
+	public getRoomByName(name: string): room | undefined {
+		for (const game of this.rooms.values()) {
+			if (game.name === name) {
+				return game;
+			}
+		}
+		return undefined;
+	}
+
 	public sendRooms(ws: WebSocket[]): void {
 		const waitingRooms = this.getWaitingGames();
 		const activeRooms = this.getActiveGames();
@@ -116,7 +126,7 @@ class StateManager {
 	private static instance: StateManager;
 	private Player: Map<number, player> = new Map();
 	private Playerws: Map<number, WebSocket> = new Map();
-	private RoomManager: RoomManager = RoomManager.getInstance();
+	public RoomManager: RoomManager = RoomManager.getInstance();
 
 	private constructor() { }
 
@@ -131,15 +141,9 @@ class StateManager {
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 
-	public addPlayer(player: player, ws: WebSocket): void {
+	public addPlayer(ws: WebSocket, player: player): void {
 		this.Player.set(player.id, player);
 		this.Playerws.set(player.id, ws);
-		// Si pas de room existante, on en crée une
-		if (!this.RoomManager.getWaitingGames().length) this.RoomManager.createRoom(player);
-		else {
-			const room = this.RoomManager.getWaitingGames()[0];
-			this.RoomManager.addPlayerToRoom(room.id, player);
-		}
 	}
 
 	public removePlayer(playerId: number): void {

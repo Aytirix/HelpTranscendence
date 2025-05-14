@@ -4,6 +4,7 @@ export type GameState = 'waiting' | 'active' | 'finished';
 
 export interface room {
 	id: number;
+	name: string;
 	owner_id: number;
 	players: player[];
 	state: GameState;

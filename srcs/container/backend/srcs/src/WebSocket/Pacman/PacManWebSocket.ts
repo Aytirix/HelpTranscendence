@@ -4,17 +4,20 @@ import { player } from "@Pacman/TypesPacman";
 import StateManager from './game/StateManager';
 import { request } from '@typesChat';
 
-function handleAddUser(player: player, ws: WebSocket): void {
-	console.log('PacmanWS Ajout de l\'utilisateur:', player);
-	StateManager.addPlayer(player, ws);
-}
-
 (async () => {
 	StateManager.loopRooms();
 })();
 
-function handleCreateRoom(json: any): void {
+function handleAddUser(ws: WebSocket, player: player): void {
+	StateManager.addPlayer(ws, player);
+}
 
+function handleCreateRoom(ws: WebSocket, player: player, json: any): void {
+	if (!json.name) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Veuillez spécifier un nom de salle'] }));
+	if (json.name.length < 3 || json.name.length > 15) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Le nom de la salle doit faire entre 3 et 15 caractères'] }));
+	if (StateManager.RoomManager.getRoomByName(json.name)) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Le nom de la salle est déjà utilisé'] }));
+	if (StateManager.RoomManager.PlayerInRoom(player)) return ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Vous êtes déjà dans une salle'] }));
+	StateManager.RoomManager.createRoom(player, json.name);
 }
 
 async function PacManWebSocket(ws: WebSocket, user: User): Promise<void> {
@@ -29,7 +32,7 @@ async function PacManWebSocket(ws: WebSocket, user: User): Promise<void> {
 		gameId: null,
 	};
 
-	handleAddUser(player, ws);
+	handleAddUser(ws, player);
 	ws.on('message', (message: Buffer) => {
 		let text: request | null = null;
 		try {
@@ -50,7 +53,7 @@ async function PacManWebSocket(ws: WebSocket, user: User): Promise<void> {
 				player.updateAt = Date.now();
 				break;
 			case 'createRoom':
-				handleCreateRoom(text);
+				handleCreateRoom(ws, player, text);
 				break;
 			default:
 				ws.send(JSON.stringify({ action: 'error', result: 'error', notification: ['Action non reconnue'] })); // to close

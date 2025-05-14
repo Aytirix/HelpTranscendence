@@ -6,7 +6,7 @@ interface ButtonGroupProps {
 
 const ButtonGroup: React.FC<ButtonGroupProps> = ({ onButtonClick }) => {
 	return (
-		<div className="flex flex-col space-y-2">
+		<div className="flex flex-col justify-between h-full mr-64">
 			<button
 				className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
 				onClick={() => onButtonClick('WaitingRooms')}>
@@ -16,6 +16,11 @@ const ButtonGroup: React.FC<ButtonGroupProps> = ({ onButtonClick }) => {
 				className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
 				onClick={() => onButtonClick('ActiveRooms')}>
 				Partie en cours
+			</button>
+			<button
+				className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+				onClick={() => onButtonClick('Statistics')}>
+				Statistiques
 			</button>
 			<button
 				className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
