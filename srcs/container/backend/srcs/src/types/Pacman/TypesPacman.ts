@@ -6,8 +6,11 @@ export interface room {
 	id: number;
 	name: string;
 	owner_id: number;
-	players: player[];
+	owner_username: string;
+	players?: player[];
+	numberOfPlayers?: number;
 	state: GameState;
+	startTime?: number;
 }
 
 export interface player {

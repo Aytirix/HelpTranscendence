@@ -11,6 +11,7 @@ function App() {
 				<Link to="/Pacman">Pacman</Link>
 				<Link to="/WebSocketTest">userTest</Link>
 				<Link to="/Pong">pong tests</Link>
+				<Link to="/ModuleManager">Module Manager</Link>
 			</nav>
 			<div>
 				<button onClick={() => setLanguage('fr')}>Français</button>

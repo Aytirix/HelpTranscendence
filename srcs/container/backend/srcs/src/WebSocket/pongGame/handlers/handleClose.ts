@@ -3,7 +3,7 @@ import { waitingID, waitingMulti } from "../state/serverState";
 
 export function handleClose(playerInfos: playerStat) {
 	if (!playerInfos.game) return ;
-	playerInfos.game.setStatus("WAITING")
+	playerInfos.game.setStatus("KICKOFF")
 	if (waitingID.has(playerInfos.id) === false && playerInfos.mode === "SameKeyboard")
 		waitingID.set(playerInfos.id, playerInfos);
 	else if (waitingID.has(playerInfos.id) === false && playerInfos.mode === "Multi")

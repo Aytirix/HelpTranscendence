@@ -10,6 +10,7 @@ import React, {
 import { Send, Loader2 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import useSafeWebSocket from '../api/useSafeWebSocket';
+import { User } from './types/userTypes';
 
 // === Theme Context ===
 const ThemeContext = createContext<{ dark: boolean; toggle: () => void }>({
@@ -20,22 +21,6 @@ const useTheme = () => useContext(ThemeContext);
 
 // Pagination constant
 const PAGE_SIZE = 20;
-
-type RelationStatus = 'friend' | 'blocked' | 'pending' | '';
-
-type User = {
-	id: number;
-	username: string;
-	email: string;
-	avatar: string | null;
-	lang: string;
-	relation?: {
-		status: RelationStatus;
-		target: number;
-		privmsg_id?: number;
-	};
-	online?: boolean;
-};
 
 type Message = { id: number; sender_id: number; message: string; sent_at: string };
 type Group = {
@@ -450,7 +435,7 @@ export default function WebSocketChat() {
 		}
 	};
 
-	const { socket: ws } = useSafeWebSocket({
+	const ws = useSafeWebSocket({
 		endpoint: '/chat',
 		onMessage: handleMessage,
 		onStatusChange: setStatus,

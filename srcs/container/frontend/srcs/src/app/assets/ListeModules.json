@@ -1,0 +1,169 @@
+{
+	"untouched": [
+		{
+			"id": "1",
+			"title": "Module backend",
+			"description": "Dans ce module majeur, vous devez utiliser un framework web spécifique pour le développement backend : Fastify avec Node.js.",
+			"major": "majeur"
+		},
+		{
+			"id": "2",
+			"title": "Module frontend",
+			"description": "Votre développement frontend doit utiliser Tailwind CSS en plus de TypeScript, et rien d’autre.",
+			"major": "mineur"
+		},
+		{
+			"id": "3",
+			"title": "Base de données backend",
+			"description": "La base de données désignée pour toutes les instances DB de votre projet est SQLite. Ce choix garantit la cohérence des données et la compatibilité entre tous les composants du projet et peut être un prérequis pour d’autres modules, tels que le module Framework backend.",
+			"major": "mineur"
+		},
+		{
+			"id": "4",
+			"title": "Module Blockchain",
+			"description": "Ce module majeur se concentre sur l’implémentation d’une fonctionnalité au sein du site Pong pour stocker en toute sécurité les scores des tournois sur une blockchain. Il est essentiel de préciser que, pour des besoins de développement et de tests, nous utiliserons un environnement blockchain de test. La blockchain choisie pour cette implémentation est Avalanche, et Solidity sera le langage de programmation utilisé pour le développement des smart contracts.\n• Intégration de la blockchain : L’objectif principal de ce module est d’intégrer de manière fluide la technologie blockchain, spécifiquement Avalanche, dans le site Pong. Cette intégration garantit le stockage sécurisé et immuable des scores de tournoi, offrant aux joueurs un enregistrement transparent et infalsifiable de leurs performances.\n• Smart Contracts Solidity : Pour interagir avec la blockchain, nous développerons des smart contracts en Solidity. Ces contrats seront responsables de l’enregistrement, de la gestion et de la récupération des scores de tournoi.\n• Blockchain de test : Comme mentionné précédemment, une blockchain de test sera utilisée pour les phases de développement et de tests. Cela garantit que toutes les fonctionnalités liées à la blockchain sont validées en profondeur sans risques associés à une blockchain en production.\n• Interopérabilité : Ce module peut dépendre d’autres modules, notamment le module Framework backend. L’intégration de la fonctionnalité blockchain pourrait nécessiter des ajustements dans le backend pour prendre en charge les interactions avec la blockchain.\nEn implémentant ce module, nous visons à améliorer le site Pong en introduisant un système de stockage des scores basé sur la blockchain. Les utilisateurs bénéficieront de la couche supplémentaire de sécurité et de transparence, assurant l’intégrité de leurs scores de jeu. Le module met l’accent sur l’utilisation d’un environnement blockchain de test pour minimiser les risques liés au développement blockchain.",
+			"major": "majeur"
+		},
+		{
+			"id": "5",
+			"title": "Gestion des utilisateurs",
+			"description": "Ce module explore la gestion des utilisateurs, abordant les aspects clés des interactions et du contrôle d’accès au sein de la plateforme Pong. Il comprend deux composants majeurs, chacun axé sur des éléments essentiels de la gestion des utilisateurs et de l’authentification : la participation des utilisateurs à plusieurs tournois et la mise en œuvre de l’authentification à distance.\n• Les utilisateurs peuvent s’inscrire en toute sécurité sur le site.\n• Les utilisateurs enregistrés peuvent se connecter en toute sécurité.\n• Les utilisateurs peuvent choisir un pseudonyme unique pour participer aux tournois.\n• Les utilisateurs peuvent mettre à jour leurs informations.\n• Les utilisateurs peuvent télécharger un avatar, avec une option par défaut si aucun n’est fourni.\n• Les utilisateurs peuvent ajouter d’autres personnes en tant qu’amis et voir leur statut en ligne.\n• Les profils utilisateur affichent des statistiques, telles que victoires et défaites.\n• Chaque utilisateur dispose d’un historique des matchs incluant les parties 1v1, les dates et les détails pertinents, accessible aux utilisateurs connectés.",
+			"major": "majeur"
+		},
+		{
+			"id": "6",
+			"title": "Authentification Google Sign-in",
+			"description": "Dans ce module majeur, l’objectif est de mettre en place le système d’authentification suivant : Google Sign-in. Les fonctionnalités et objectifs clés incluent :\n• Intégrer le système d’authentification, permettant aux utilisateurs de se connecter en toute sécurité.\n• Obtenir les identifiants et autorisations nécessaires auprès de l’autorité pour permettre une connexion sécurisée.\n• Mettre en œuvre des flux de connexion et d’autorisation conviviaux respectant les meilleures pratiques et normes de sécurité.\n• Assurer l’échange sécurisé des jetons d’authentification et des informations utilisateur entre l’application web et le fournisseur d’authentification.\nCe module majeur vise à fournir une authentification à distance, offrant aux utilisateurs un moyen sécurisé et pratique d’accéder à l’application web.",
+			"major": "majeur"
+		},
+		{
+			"id": "7",
+			"title": "Joueurs distants",
+			"description": "Ce module majeur doit permettre à deux joueurs de jouer à distance. Chaque joueur se trouve sur un ordinateur différent, accédant au même site et jouant à la même partie de Pong. Il faut prendre en compte les problèmes réseau, tels que les déconnexions inattendues ou la latence.\n• Vous devez offrir la meilleure expérience utilisateur possible.",
+			"major": "majeur"
+		},
+		{
+			"id": "8",
+			"title": "Plusieurs joueurs",
+			"description": "Ce module majeur doit permettre d’accueillir plus de deux joueurs. Chaque joueur doit disposer d’un contrôle en temps réel (le module « Joueurs distants » est fortement recommandé). À vous de définir comment le jeu pourrait se jouer à 3, 4, 5, 6 joueurs ou plus. En plus du jeu à 2 joueurs classique, vous pouvez prévoir un nombre de joueurs supérieur à 2 pour ce module multijoueur. Par exemple : 4 joueurs pourraient jouer sur un plateau carré, chaque joueur contrôlant un côté unique du carré.",
+			"major": "majeur"
+		},
+		{
+			"id": "9",
+			"title": "Deuxième jeu",
+			"description": "Le but de ce module majeur est d’introduire un nouveau jeu, distinct de Pong, et d’y intégrer des fonctionnalités telles que le suivi de l’historique des utilisateurs et le matchmaking. Objectifs clés :\n• Développer un nouveau jeu engageant pour diversifier l’offre de la plateforme.\n• Mettre en place le suivi de l’historique des utilisateurs pour enregistrer et afficher les statistiques de jeu individuelles.\n• Créer un système de matchmaking pour permettre aux utilisateurs de trouver des adversaires et participer à des matchs équitables.\n• Veiller à ce que l’historique de jeu et les données de matchmaking soient stockés de manière sécurisée et toujours à jour.\n• Optimiser les performances et la réactivité du nouveau jeu pour offrir une expérience utilisateur agréable. Maintenir et mettre à jour régulièrement le jeu pour corriger les bugs, ajouter des fonctionnalités et améliorer le gameplay.",
+			"major": "majeur"
+		},
+		{
+			"id": "10",
+			"title": "Options de personnalisation du jeu",
+			"description": "Dans ce module mineur, l’objectif est de fournir des options de personnalisation pour tous les jeux disponibles sur la plateforme. Objectifs clés :\n• Proposer des fonctionnalités de personnalisation, telles que power-ups, attaques ou cartes différentes, pour enrichir l’expérience de jeu.\n• Permettre aux utilisateurs de choisir une version « par défaut » du jeu avec des fonctionnalités de base pour une expérience simplifiée.\n• Veiller à ce que les options de personnalisation soient disponibles et applicables à tous les jeux de la plateforme.\n• Mettre en place des menus ou interfaces conviviales pour ajuster les paramètres de jeu.\n• Assurer la cohérence des fonctionnalités de personnalisation entre tous les jeux pour une expérience utilisateur unifiée.",
+			"major": "mineur"
+		},
+		{
+			"id": "11",
+			"title": "Chat en direct",
+			"description": "Dans ce module, vous devez créer une fonctionnalité de chat pour les utilisateurs :\n• L’utilisateur doit pouvoir envoyer des messages privés à d’autres utilisateurs.\n• L’utilisateur doit pouvoir bloquer d’autres comptes, les empêchant de voir tout message ultérieur.\n• L’utilisateur doit pouvoir inviter d’autres joueurs à une partie de Pong via l’interface de chat.\n• Le système de tournois doit pouvoir notifier les utilisateurs du prochain match.\n• L’utilisateur doit pouvoir accéder aux profils des autres joueurs depuis l’interface de chat.",
+			"major": "majeur"
+		},
+		{
+			"id": "12",
+			"title": "Adversaire IA",
+			"description": "Dans ce module majeur, l’objectif est d’intégrer un adversaire IA au jeu. L’utilisation de l’algorithme A* n’est pas autorisée. Objectifs clés :\n• Développer une IA offrant une expérience de jeu stimulante et engageante.\n• L’IA doit simuler un comportement humain : elle ne peut rafraîchir sa vue du jeu qu’une fois par seconde, ce qui l’oblige à anticiper les rebonds et autres actions.\n• L’IA doit utiliser les power-ups si le module « Options de personnalisation du jeu » est implémenté.\n• Mettre en place une logique et des processus de prise de décision intelligents pour que l’IA fasse des mouvements stratégiques.\n• Explorer des algorithmes et techniques alternatifs pour créer une IA efficace sans recourir à A*.\n• Veiller à ce que l’IA s’adapte à différents scénarios de jeu et interactions utilisateur.",
+			"major": "majeur"
+		},
+		{
+			"id": "13",
+			"title": "Statistiques poussées du jeu",
+			"description": "Dans ce module mineur, l’objectif est d’introduire des tableaux de bord affichant les statistiques des utilisateurs et des sessions de jeu. Objectifs clés :\n• Créer des tableaux de bord conviviaux offrant aux utilisateurs des informations sur leurs statistiques de jeu.\n• Développer un tableau de bord distinct pour les sessions de jeu, montrant des statistiques détaillées, les résultats et les données historiques de chaque match.\n• Veiller à ce que les tableaux de bord offrent une interface intuitive et informative pour suivre et analyser les données.\n• Mettre en œuvre des techniques de visualisation, comme des graphiques, pour présenter les statistiques de manière claire et attrayante.\n• Permettre aux utilisateurs d’accéder et d’explorer facilement leur historique de jeu et leurs indicateurs de performance.\n• Libre à vous d’ajouter d’autres métriques jugées utiles.",
+			"major": "mineur"
+		},
+		{
+			"id": "14",
+			"title": "Mettre en place WAF/ModSecurity HashiCorp Vault",
+			"description": "L’objectif de ce module majeur est de renforcer l’infrastructure de sécurité du projet en implémentant plusieurs composants clés :\n• Configurer et déployer un Web Application Firewall (WAF) et ModSecurity avec une configuration stricte et sécurisée pour protéger contre les attaques web.\n• Intégrer HashiCorp Vault pour gérer et stocker en toute sécurité les informations sensibles, telles que clés API, identifiants et variables d’environnement, en garantissant leur chiffrement et isolation.\nCe module vise à consolider l’infrastructure de sécurité du projet grâce à des mesures robustes, incluant WAF/ModSecurity pour la protection des applications web et Vault pour la gestion sécurisée des secrets.",
+			"major": "majeur"
+		},
+		{
+			"id": "15",
+			"title": "Options de conformité RGPD",
+			"description": "Le but de ce module mineur est d’introduire des options de conformité RGPD permettant aux utilisateurs d’exercer leurs droits à la vie privée :\n• Mettre en place des fonctionnalités conformes au RGPD permettant aux utilisateurs de demander l’anonymisation de leurs données personnelles, garantissant la protection de leur identité et informations sensibles.\n• Fournir des outils pour gérer leurs données locales, incluant la consultation, modification ou suppression des informations stockées.\n• Proposer un processus simplifié pour demander la suppression définitive de leur compte et de toutes les données associées, assurant le respect des réglementations.\n• Maintenir une communication claire et transparente sur les droits des utilisateurs, avec des options facilement accessibles pour exercer ces droits.",
+			"major": "mineur"
+		},
+		{
+			"id": "16",
+			"title": "Authentification 2FA JWT",
+			"description": "L’objectif de ce module majeur est de renforcer la sécurité et l’authentification des utilisateurs en introduisant :\n• L’authentification à deux facteurs (2FA) comme couche supplémentaire de sécurité, exigeant un moyen de vérification secondaire (code à usage unique) en plus du mot de passe.\n• L’utilisation de JSON Web Tokens (JWT) pour l’authentification et l’autorisation, assurant une gestion sécurisée des sessions et de l’accès aux ressources.\n• Un processus d’activation de la 2FA simple et convivial, avec options SMS, applications d’authentification ou vérification par e-mail.\n• La génération et validation sécurisées des tokens JWT pour prévenir tout accès non autorisé aux comptes et données sensibles.",
+			"major": "majeur"
+		},
+		{
+			"id": "17",
+			"title": "Infrastructure ELK",
+			"description": "L’objectif de ce module majeur est d’établir une infrastructure robuste pour la gestion et l’analyse des logs à l’aide de la stack ELK :\n• Déployer Elasticsearch pour stocker et indexer efficacement les données de logs, assurant une recherche rapide et accessible.\n• Configurer Logstash pour collecter, traiter et transformer les logs provenant de diverses sources, puis les envoyer vers Elasticsearch.\n• Mettre en place Kibana pour visualiser les données de logs, créer des tableaux de bord et générer des insights à partir des événements.\n• Définir des politiques de rétention et d’archivage pour gérer efficacement le stockage des logs.\n• Implémenter des mesures de sécurité pour protéger les données de logs et l’accès aux composants ELK.",
+			"major": "majeur"
+		},
+		{
+			"id": "18",
+			"title": "Système de monitoring",
+			"description": "Le but de ce module mineur est de mettre en place un système de surveillance complet avec Prometheus et Grafana :\n• Déployer Prometheus pour la collecte de métriques, la surveillance et les alertes sur la santé et les performances des composants.\n• Configurer des exporters et intégrations pour capturer les métriques de services, bases de données et infrastructures.\n• Créer des tableaux de bord personnalisés dans Grafana pour offrir une visibilité en temps réel sur les métriques système.\n• Définir des règles d’alerte dans Prometheus pour détecter et réagir aux incidents critiques.\n• Mettre en place des stratégies de rétention des données historiques et un contrôle d’accès sécurisé pour Grafana.",
+			"major": "mineur"
+		},
+		{
+			"id": "19",
+			"title": "Conception du backend en microservices",
+			"description": "L’objectif de ce module majeur est d’architecturer le backend du système selon une approche microservices :\n• Diviser le backend en microservices indépendants, chacun responsable d’une fonction ou fonctionnalité spécifique.\n• Définir des frontières claires et des interfaces entre microservices pour permettre un développement, un déploiement et une mise à l’échelle autonomes.\n• Mettre en œuvre des mécanismes de communication inter-services, tels que API RESTful ou files de messages, pour faciliter l’échange de données et la coordination.\n• Veiller à ce que chaque microservice se concentre sur une tâche ou capacité métier bien définie, favorisant la maintenabilité et la scalabilité.",
+			"major": "majeur"
+		},
+		{
+			"id": "20",
+			"title": "Mise en œuvre de techniques 3D avancées",
+			"description": "Ce module majeur « Graphics » se concentre sur l’amélioration des aspects visuels du jeu Pong. Il introduit l’utilisation de techniques 3D avancées pour créer une expérience de jeu plus immersive :\n• Graphismes 3D avancés : l’objectif principal est d’implémenter des techniques 3D avancées pour élever la qualité visuelle du jeu Pong, en utilisant Babylon.js pour obtenir des effets visuels époustouflants.\n• Gameplay immersif : l’incorporation de techniques 3D avancées améliore l’expérience globale en offrant aux joueurs un jeu Pong visuellement captivant.\n• Intégration technologique : la technologie choisie est Babylon.js, garantissant la compatibilité et des performances optimales.",
+			"major": "majeur"
+		},
+		{
+			"id": "21",
+			"title": "Support sur tous les appareils",
+			"description": "Dans ce module mineur, l’objectif est de garantir que le site fonctionne parfaitement sur tous les types d’appareils :\n• Adaptabilité responsive : assurer que le site s’adapte aux différentes tailles et orientations d’écran (ordinateurs de bureau, portables, tablettes, smartphones).\n• Méthodes d’interaction : garantir une navigation et une interaction fluides quel que soit le dispositif (écrans tactiles, claviers, souris).",
+			"major": "mineur"
+		},
+		{
+			"id": "22",
+			"title": "Extension de la compatibilité des navigateurs",
+			"description": "Dans ce module mineur, l’objectif est d’ajouter le support d’un navigateur supplémentaire :\n• Support navigateur étendu : inclure un navigateur additionnel pour que tous les utilisateurs puissent accéder à l’application sans problème.\n• Tests et optimisation : vérifier et ajuster le rendu et le fonctionnement dans le nouveau navigateur.\n• Uniformité UX : maintenir une expérience utilisateur cohérente sur tous les navigateurs pris en charge.",
+			"major": "mineur"
+		},
+		{
+			"id": "23",
+			"title": "Support multilingue",
+			"description": "Dans ce module mineur, l’objectif est de proposer plusieurs langues sur le site :\n• Au moins trois langues : implémenter un support pour un minimum de trois langues.\n• Sélecteur de langue : fournir un interrupteur permettant aux utilisateurs de changer facilement de langue.\n• Traduction du contenu essentiel : menus, titres et informations clés.\n• Préférence utilisateur : permettre de définir une langue par défaut pour les visites suivantes.\n• Bibliothèques de localisation : utiliser des packs ou bibliothèques pour simplifier la traduction et garantir la cohérence.",
+			"major": "mineur"
+		},
+		{
+			"id": "24",
+			"title": "Accessibilité pour malvoyants",
+			"description": "Dans ce module mineur, l’objectif est de rendre le site plus accessible aux malvoyants :\n• Compatibilité lecteurs d’écran et technologies d’assistance.\n• Texte alternatif descriptif pour les images.\n• Schéma de couleurs à contraste élevé.\n• Navigation au clavier et gestion du focus.\n• Options de réglage de la taille du texte.\n• Mises à jour régulières pour respecter les normes d’accessibilité.",
+			"major": "mineur"
+		},
+		{
+			"id": "25",
+			"title": "Intégration du rendu côté serveur (SSR)",
+			"description": "Dans ce module mineur, l’objectif est d’intégrer le Server-Side Rendering pour améliorer les performances :\n• Chargement rapide : pré-rendre le contenu sur le serveur pour accélérer l’affichage initial.\n• SEO optimisé : fournir aux moteurs de recherche du HTML déjà rendu.\n• Expérience utilisateur cohérente : bénéficier des avantages du SSR tout en conservant l’UX existante.",
+			"major": "mineur"
+		},
+		{
+			"id": "26",
+			"title": "Remplacement de Pong basique par Pong côté serveur et API",
+			"description": "Dans ce module majeur, l’objectif est de remplacer le jeu Pong basique par une version côté serveur et de mettre en place une API :\n• Logique serveur : gérer la partie, le mouvement de la balle, le score et les interactions.\n• API REST : exposer les ressources et points d’accès pour l’initialisation du jeu, le contrôle des joueurs et la mise à jour de l’état.\n• CLI et interface web : permettre l’utilisation partielle du jeu via ligne de commande et navigateur.\n• Expérience réactive : assurer un jeu fluide et engageant côté serveur.\n• Intégration web : permettre aux utilisateurs de jouer directement sur le site.",
+			"major": "majeur"
+		},
+		{
+			"id": "27",
+			"title": "Jeu Pong via CLI",
+			"description": "Dans ce module majeur, l’objectif est de développer une interface CLI pour jouer à Pong contre des utilisateurs web via l’API :\n• Application CLI : reproduire l’expérience Pong du site pour les utilisateurs en ligne de commande.\n• Communication API : connecter la CLI à l’application web pour rejoindre et interagir avec des joueurs web.\n• Authentification CLI : permettre aux utilisateurs CLI de se connecter en toute sécurité.\n• Synchronisation temps réel : assurer des interactions de jeu cohérentes entre CLI et web.\n• Documentation complète : guider l’utilisation de la CLI pour jouer contre des utilisateurs web.",
+			"major": "majeur"
+		}
+	],
+	"rejected": [],
+	"undecided": [],
+	"accepted": []
+}

@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSafeWebSocket } from '../../api/useSafeWebSocket';
-import { State } from './types';
+import { state } from '../types/pacmanTypes';
 import { CenteredBox } from './menu/CenteredBox';
+import { useAuth } from '../../contexts/AuthContext';
 
-function initState(): State {
+function initState(): state {
 	return {
 		ws: null,
 		statusws: 'Connecting...',
+		player: useAuth().user,
 		rooms: {
 			active: [],
 			waiting: [],
@@ -15,12 +17,12 @@ function initState(): State {
 }
 
 export default function WebSocketPacman() {
-	const [state, setState] = useState<State>(initState());
+	const [state, setState] = useState<state>(initState());
 
 	const handleMessage = (data: any) => {
 		switch (data.action) {
 			case 'getrooms': {
-				setState((prevState: State) => ({
+				setState((prevState: state) => ({
 					...prevState,
 					rooms: {
 						waiting: data.waiting,
@@ -57,11 +59,8 @@ export default function WebSocketPacman() {
 	}, [websocket]);
 
 	return (
-		<>
-			<h1 className="text-3xl font-bold text-center text-white mb-4 justify-center">PACMAN</h1>
-			<div className="bg-gray-900 text-white flex flex-col items-center justify-center">
-				<CenteredBox state={state} />
-			</div>
-		</>
+		<div className="bg-gray-200 text-white flex flex-col items-center justify-center">
+			<CenteredBox state={state} />
+		</div>
 	);
 }

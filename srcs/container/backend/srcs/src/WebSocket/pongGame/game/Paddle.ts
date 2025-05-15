@@ -19,12 +19,14 @@ export class Paddle {
 	
 		switch (cmd) {
 		case "up" :
-			if (this.pos_y >= 3) 
-				this.pos_y -= 5;
+			if (this.pos_y >= 3) {
+					this.pos_y -= 5;//5
+			}
 			break;
 		case "down" :
-			if (this.pos_y + this.height <= 600)
-				this.pos_y += 5;
+			if (this.pos_y + this.height <= 600) {
+					this.pos_y += 5;//5
+			}
 			break;
 		case "center" :
 			break ;

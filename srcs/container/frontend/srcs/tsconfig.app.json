@@ -24,9 +24,9 @@
 		"noFallthroughCasesInSwitch": true,
 		"noUncheckedSideEffectImports": true,
 		"paths": {
-			"@i18n": [
-				"./src/i18next/i18next"
-			],
+			"@i18n": ["./src/i18next/i18next"],
+			"@styles/*": ["./src/app/assets/styles/*"],
+			"@types/*": ["./src/app/types/*"]
 		}
 	},
 	"include": [

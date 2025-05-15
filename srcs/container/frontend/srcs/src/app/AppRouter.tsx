@@ -6,6 +6,7 @@ import { Routes, Route } from 'react-router-dom';
 import Chat from './UserTest';
 import { Pong } from './pongGame/client'
 import WebSocketPacman from './Pacman/Init'
+import ModuleManager from './ModuleManager';
 import App from './App';
 
 // PAGES
@@ -25,6 +26,7 @@ class AppRouter extends Component {
 					<Route path="/pong" element={<Pong />} />
 					<Route path="/Pacman" element={<WebSocketPacman />} />
 					<Route path="/userTest" element={<Chat />} />
+					<Route path="/ModuleManager" element={<ModuleManager />} />
 				</Route>
 
 			</Routes>

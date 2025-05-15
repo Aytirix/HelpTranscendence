@@ -24,8 +24,9 @@ export async function isAuth(request: FastifyRequest, reply: FastifyReply) {
 	if (request && request.session && request.session.user !== undefined) {
 		const user = request.session.user as User;
 		return reply.status(200).send({
-			isAuthenticated: false,
+			isAuthenticated: true,
 			user: {
+				id: user.id,
 				email: user.email,
 				username: user.username,
 				lang: user.lang,

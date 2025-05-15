@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ApiService from '../api/ApiService';
+import { useLanguage } from '../contexts/LanguageContext';
+import { User } from '../app/types/userTypes';
 
 interface AuthContextType {
-	user: { isAuthenticated: boolean } | null;
+	user: User | null;
 	loading: boolean;
 }
 
@@ -21,8 +23,9 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-	const [user, setUser] = useState<{ isAuthenticated: boolean } | null>(null);
+	const [user, setUser] = useState<User | null>(null);
 	const [loading, setLoading] = useState<boolean>(true);
+	const { setLanguage } = useLanguage();
 	const navigate = useNavigate();
 
 	useEffect(() => {
@@ -33,7 +36,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 			try {
 				const res = await ApiService.get('/isAuth');
 				if (isMounted) {
-					setUser({ isAuthenticated: res.isAuthenticated });
+					setLanguage(res.user.lang);
+					setUser(res.user)
 					if (res.isAuthenticated && (window.location.pathname == "/login" || window.location.pathname == "/register")) {
 						navigate('/');
 					} else if (!res.isAuthenticated && window.location.pathname !== "/login") {
@@ -43,7 +47,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 			} catch (err) {
 				console.error("Auth check failed:", err);
 				if (isMounted) {
-					setUser({ isAuthenticated: false });
+					setUser(null);
 				}
 			} finally {
 				if (isMounted) setLoading(false);
@@ -60,14 +64,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 	return (
 		<IsAuthenticated.Provider value={{ user, loading }}>
 			{loading ? (
-				<div className="flex justify-center items-center h-screen">
-					<p>Chargement...</p>
-				</div>
+				<></>
 			) : (
 				children
 			)}
 		</IsAuthenticated.Provider>
 	);
 };
-
-export { IsAuthenticated };
