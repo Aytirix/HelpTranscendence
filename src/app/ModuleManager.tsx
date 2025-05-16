@@ -49,102 +49,54 @@ const DroppableArea: React.FC<{ id: string; children: React.ReactNode }> = ({ id
 	);
 };
 
-const DraggableItem: React.FC<ModuleItem & { 
-  onContextMenu: (id: string) => void, 
-  onMove?: (id: string, targetColumn: ColumnKey) => void,
-  currentColumn: ColumnKey
-}> = ({
-  id,
-  title,
-  onContextMenu,
-  onMove,
-  currentColumn
+const DraggableItem: React.FC<ModuleItem & { onContextMenu: (id: string) => void }> = ({
+	id,
+	title,
+	onContextMenu
 }) => {
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({ id });
-  const [showMobileControls, setShowMobileControls] = useState(false);
-  const style: React.CSSProperties = {
-    ...(transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : {}),
-    position: 'relative'
-  };
-  
-  const handleLongPress = () => {
-    setShowMobileControls(!showMobileControls);
-  };
-  
-  const isMobile = window.innerWidth <= 768;
-  
-  return (
-    <div className="module-item-container">
-      <div
-        ref={setNodeRef}
-        style={style}
-        {...attributes}
-        {...listeners}
-        onContextMenu={e => {
-          e.preventDefault();
-          onContextMenu(id);
-        }}
-        onClick={() => isMobile && onContextMenu(id)}
-        onTouchStart={() => isMobile && setTimeout(handleLongPress, 500)}
-        className="module-item"
-      >
-        {title}
-      </div>
-      
-      {isMobile && showMobileControls && onMove && (
-        <div className="mobile-controls">
-          {currentColumn !== 'untouched' && (
-            <button onClick={() => onMove(id, 'untouched')}>⏮️ Non triés</button>
-          )}
-          {currentColumn !== 'rejected' && (
-            <button onClick={() => onMove(id, 'rejected')}>❌ Rejetés</button>
-          )}
-          {currentColumn !== 'undecided' && (
-            <button onClick={() => onMove(id, 'undecided')}>⏸️ En attente</button>
-          )}
-          {currentColumn !== 'accepted' && (
-            <button onClick={() => onMove(id, 'accepted')}>✅ Acceptés</button>
-          )}
-        </div>
-      )}
-    </div>
-  );
+	const { attributes, listeners, setNodeRef, transform } = useDraggable({ id });
+	const style: React.CSSProperties = {
+		...(transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : {}),
+		position: 'relative'
+	};
+	return (
+		<div
+			ref={setNodeRef}
+			style={style}
+			{...attributes}
+			{...listeners}
+			onContextMenu={e => {
+				e.preventDefault();
+				onContextMenu(id);
+			}}
+			className="module-item"
+		>
+			{title}
+		</div>
+	);
 };
 
 const Modal: React.FC<{ item: ModuleItem; onClose: () => void }> = ({ item, onClose }) => {
-  const [isClosing, setIsClosing] = useState(false);
+	const [isClosing, setIsClosing] = useState(false);
 
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(onClose, 300); // Attendre la fin de l'animation avant de fermer
-  };
+	const handleClose = () => {
+		setIsClosing(true);
+		setTimeout(onClose, 300); // Attendre la fin de l'animation avant de fermer
+	};
 
-  return (
-    <>
-      <div
-        className={`modal-backdrop ${isClosing ? 'fade-out' : 'fade-in'}`}
-        onClick={handleClose}
-      />
-      <div className={`modal-content-center ${isClosing ? 'slide-out' : 'slide-in'}`}>
-        <div className="modal-header">
-          <h2>{item.title}</h2>
-          <button 
-            className="modal-close-btn" 
-            onClick={handleClose}
-            aria-label="Fermer"
-          >
-            ×
-          </button>
-        </div>
-        <div className="modal-body">
-          <pre>{item.description}</pre>
-        </div>
-        <div className="modal-footer">
-          <button onClick={handleClose} className="modal-close-button">Fermer</button>
-        </div>
-      </div>
-    </>
-  );
+	return (
+		<>
+			<div
+				className={`modal-backdrop ${isClosing ? 'fade-out' : 'fade-in'}`}
+				onClick={handleClose}
+			/>
+			<div className={`modal-content-center ${isClosing ? 'slide-out' : 'slide-in'}`}>
+				<h2>{item.title}</h2>
+				<pre>{item.description}</pre>
+				<button onClick={handleClose}>Fermer</button>
+			</div>
+		</>
+	);
 };
 
 const DragAndDropModules: React.FC = () => {
@@ -250,40 +202,6 @@ const DragAndDropModules: React.FC = () => {
 		setColumns({ ...colsSans, [toCol]: [...majorList, ...minorList] });
 	};
 
-	const handleMoveItem = (id: string, targetColumn: ColumnKey) => {
-		let sourceColumn: ColumnKey | null = null;
-		let movedItem: ModuleItem | undefined;
-
-		// Trouver l'élément et sa colonne source
-		for (const col of Object.keys(columns) as ColumnKey[]) {
-			const item = columns[col].find(item => item.id === id);
-			if (item) {
-				sourceColumn = col;
-				movedItem = item;
-				break;
-			}
-		}
-
-		if (!sourceColumn || !movedItem || sourceColumn === targetColumn) return;
-
-		// Créer de nouvelles colonnes sans l'élément déplacé
-		const newColumns = { ...columns };
-		newColumns[sourceColumn] = columns[sourceColumn].filter(item => item.id !== id);
-
-		// Ajouter l'élément à la colonne cible
-		const majorList = columns[targetColumn].filter(i => i.major);
-		const minorList = columns[targetColumn].filter(i => !i.major);
-
-		if (movedItem.major) majorList.unshift(movedItem);
-		else minorList.unshift(movedItem);
-
-		newColumns[targetColumn] = [...majorList, ...minorList];
-		setColumns(newColumns);
-
-		// Fermer les contrôles mobiles après déplacement
-		setShowMobileControls(false);
-	};
-
 	const handleExportData = () => {
 		try {
 			const data = {
@@ -369,8 +287,6 @@ const DragAndDropModules: React.FC = () => {
 	const handleContextMenu = (id: string) =>
 		setModalItem(Object.values(columns).flat().find(i => i.id === id) || null);
 
-	const [showMobileControls, setShowMobileControls] = useState(false);
-	const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
 	const allModules = Object.values(columns).flat();
 	const totalMinor = allModules.filter(m => !m.major).length;
@@ -436,7 +352,7 @@ const DragAndDropModules: React.FC = () => {
 								className="close-info-btn"
 								onClick={closeInfo}
 								aria-label="Fermer le message d'information"
-								>
+							 >
 								×
 							</button>
 						</div>
@@ -484,8 +400,6 @@ const DragAndDropModules: React.FC = () => {
 														key={item.id}
 														{...item}
 														onContextMenu={handleContextMenu}
-														onMove={handleMoveItem}
-														currentColumn={col}
 													/>
 												))}
 											</div>
@@ -501,8 +415,6 @@ const DragAndDropModules: React.FC = () => {
 														key={item.id}
 														{...item}
 														onContextMenu={handleContextMenu}
-														onMove={handleMoveItem}
-														currentColumn={col}
 													/>
 												))}
 											</div>
