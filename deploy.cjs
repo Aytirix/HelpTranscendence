@@ -2,7 +2,7 @@
 const { execSync } = require("child_process");
 const fs = require("fs");
 
-const DIST_DIR = "dist";
+const DIST_DIR = "build";
 const BRANCH = "build";
 const REPO = "git@github.com:Aytirix/HelpTranscendence.git";
 const TMP_DIR = ".gh-temp";

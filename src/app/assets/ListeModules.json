@@ -110,13 +110,13 @@
 		},
 		{
 			"id": "19",
-			"title": "Conception du backend en microservices",
+			"title": "Microservices",
 			"description": "L’objectif de ce module majeur est d’architecturer le backend du système selon une approche microservices :\n• Diviser le backend en microservices indépendants, chacun responsable d’une fonction ou fonctionnalité spécifique.\n• Définir des frontières claires et des interfaces entre microservices pour permettre un développement, un déploiement et une mise à l’échelle autonomes.\n• Mettre en œuvre des mécanismes de communication inter-services, tels que API RESTful ou files de messages, pour faciliter l’échange de données et la coordination.\n• Veiller à ce que chaque microservice se concentre sur une tâche ou capacité métier bien définie, favorisant la maintenabilité et la scalabilité.",
 			"major": "majeur"
 		},
 		{
 			"id": "20",
-			"title": "Mise en œuvre de techniques 3D avancées",
+			"title": "Module Babylon.js",
 			"description": "Ce module majeur « Graphics » se concentre sur l’amélioration des aspects visuels du jeu Pong. Il introduit l’utilisation de techniques 3D avancées pour créer une expérience de jeu plus immersive :\n• Graphismes 3D avancés : l’objectif principal est d’implémenter des techniques 3D avancées pour élever la qualité visuelle du jeu Pong, en utilisant Babylon.js pour obtenir des effets visuels époustouflants.\n• Gameplay immersif : l’incorporation de techniques 3D avancées améliore l’expérience globale en offrant aux joueurs un jeu Pong visuellement captivant.\n• Intégration technologique : la technologie choisie est Babylon.js, garantissant la compatibilité et des performances optimales.",
 			"major": "majeur"
 		},
@@ -152,7 +152,7 @@
 		},
 		{
 			"id": "26",
-			"title": "Remplacement de Pong basique par Pong côté serveur et API",
+			"title": "Pong côté serveur",
 			"description": "Dans ce module majeur, l’objectif est de remplacer le jeu Pong basique par une version côté serveur et de mettre en place une API :\n• Logique serveur : gérer la partie, le mouvement de la balle, le score et les interactions.\n• API REST : exposer les ressources et points d’accès pour l’initialisation du jeu, le contrôle des joueurs et la mise à jour de l’état.\n• CLI et interface web : permettre l’utilisation partielle du jeu via ligne de commande et navigateur.\n• Expérience réactive : assurer un jeu fluide et engageant côté serveur.\n• Intégration web : permettre aux utilisateurs de jouer directement sur le site.",
 			"major": "majeur"
 		},

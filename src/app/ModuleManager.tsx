@@ -9,7 +9,6 @@ import {
 	DragStartEvent
 } from '@dnd-kit/core';
 import './assets/styles/ModuleManager.scss';
-import './assets/styles/App.scss';
 import modulesDataImport from './assets/ListeModules.json';
 
 interface ModuleItem {
@@ -50,43 +49,103 @@ const DroppableArea: React.FC<{ id: string; children: React.ReactNode }> = ({ id
 	);
 };
 
-const DraggableItem: React.FC<ModuleItem & { onContextMenu: (id: string) => void }> = ({
-	id,
-	title,
-	onContextMenu
+const DraggableItem: React.FC<ModuleItem & { 
+  onContextMenu: (id: string) => void, 
+  onMove?: (id: string, targetColumn: ColumnKey) => void,
+  currentColumn: ColumnKey
+}> = ({
+  id,
+  title,
+  onContextMenu,
+  onMove,
+  currentColumn
 }) => {
-	const { attributes, listeners, setNodeRef, transform } = useDraggable({ id });
-	const style: React.CSSProperties = {
-		...(transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : {}),
-		position: 'relative'
-	};
-	return (
-		<div
-			ref={setNodeRef}
-			style={style}
-			{...attributes}
-			{...listeners}
-			onContextMenu={e => {
-				e.preventDefault();
-				onContextMenu(id);
-			}}
-			className="module-item"
-		>
-			{title}
-		</div>
-	);
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({ id });
+  const [showMobileControls, setShowMobileControls] = useState(false);
+  const style: React.CSSProperties = {
+    ...(transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : {}),
+    position: 'relative'
+  };
+  
+  const handleLongPress = () => {
+    setShowMobileControls(!showMobileControls);
+  };
+  
+  const isMobile = window.innerWidth <= 768;
+  
+  return (
+    <div className="module-item-container">
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        onContextMenu={e => {
+          e.preventDefault();
+          onContextMenu(id);
+        }}
+        onClick={() => isMobile && onContextMenu(id)}
+        onTouchStart={() => isMobile && setTimeout(handleLongPress, 500)}
+        className="module-item"
+      >
+        {title}
+      </div>
+      
+      {isMobile && showMobileControls && onMove && (
+        <div className="mobile-controls">
+          {currentColumn !== 'untouched' && (
+            <button onClick={() => onMove(id, 'untouched')}>⏮️ Non triés</button>
+          )}
+          {currentColumn !== 'rejected' && (
+            <button onClick={() => onMove(id, 'rejected')}>❌ Rejetés</button>
+          )}
+          {currentColumn !== 'undecided' && (
+            <button onClick={() => onMove(id, 'undecided')}>⏸️ En attente</button>
+          )}
+          {currentColumn !== 'accepted' && (
+            <button onClick={() => onMove(id, 'accepted')}>✅ Acceptés</button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 };
 
-const Modal: React.FC<{ item: ModuleItem; onClose: () => void }> = ({ item, onClose }) => (
-	<>
-		<div className="modal-backdrop" onClick={onClose} />
-		<div className="modal-content-center">
-			<h2>{item.title}</h2>
-			<pre>{item.description}</pre>
-			<button onClick={onClose}>Fermer</button>
-		</div>
-	</>
-);
+const Modal: React.FC<{ item: ModuleItem; onClose: () => void }> = ({ item, onClose }) => {
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(onClose, 300); // Attendre la fin de l'animation avant de fermer
+  };
+
+  return (
+    <>
+      <div
+        className={`modal-backdrop ${isClosing ? 'fade-out' : 'fade-in'}`}
+        onClick={handleClose}
+      />
+      <div className={`modal-content-center ${isClosing ? 'slide-out' : 'slide-in'}`}>
+        <div className="modal-header">
+          <h2>{item.title}</h2>
+          <button 
+            className="modal-close-btn" 
+            onClick={handleClose}
+            aria-label="Fermer"
+          >
+            ×
+          </button>
+        </div>
+        <div className="modal-body">
+          <pre>{item.description}</pre>
+        </div>
+        <div className="modal-footer">
+          <button onClick={handleClose} className="modal-close-button">Fermer</button>
+        </div>
+      </div>
+    </>
+  );
+};
 
 const DragAndDropModules: React.FC = () => {
 	const modulesDataHash = useMemo(() => JSON.stringify(modulesData), []);
@@ -191,6 +250,40 @@ const DragAndDropModules: React.FC = () => {
 		setColumns({ ...colsSans, [toCol]: [...majorList, ...minorList] });
 	};
 
+	const handleMoveItem = (id: string, targetColumn: ColumnKey) => {
+		let sourceColumn: ColumnKey | null = null;
+		let movedItem: ModuleItem | undefined;
+
+		// Trouver l'élément et sa colonne source
+		for (const col of Object.keys(columns) as ColumnKey[]) {
+			const item = columns[col].find(item => item.id === id);
+			if (item) {
+				sourceColumn = col;
+				movedItem = item;
+				break;
+			}
+		}
+
+		if (!sourceColumn || !movedItem || sourceColumn === targetColumn) return;
+
+		// Créer de nouvelles colonnes sans l'élément déplacé
+		const newColumns = { ...columns };
+		newColumns[sourceColumn] = columns[sourceColumn].filter(item => item.id !== id);
+
+		// Ajouter l'élément à la colonne cible
+		const majorList = columns[targetColumn].filter(i => i.major);
+		const minorList = columns[targetColumn].filter(i => !i.major);
+
+		if (movedItem.major) majorList.unshift(movedItem);
+		else minorList.unshift(movedItem);
+
+		newColumns[targetColumn] = [...majorList, ...minorList];
+		setColumns(newColumns);
+
+		// Fermer les contrôles mobiles après déplacement
+		setShowMobileControls(false);
+	};
+
 	const handleExportData = () => {
 		try {
 			const data = {
@@ -198,16 +291,16 @@ const DragAndDropModules: React.FC = () => {
 				modulesDataHash: modulesDataHash,
 				moduleInfoClosed: !showInfo
 			};
-			
+
 			const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
 			const url = URL.createObjectURL(blob);
-			
+
 			const a = document.createElement('a');
 			a.href = url;
 			a.download = 'Transcendence-Module-Export.json';
 			document.body.appendChild(a);
 			a.click();
-			
+
 			URL.revokeObjectURL(url);
 			document.body.removeChild(a);
 		} catch (error) {
@@ -224,21 +317,21 @@ const DragAndDropModules: React.FC = () => {
 		reader.onload = (event) => {
 			try {
 				const importedData = JSON.parse(event.target?.result as string);
-				
+
 				if (importedData.columns) {
 					setColumns(importedData.columns);
 					localStorage.setItem('moduleColumns', JSON.stringify(importedData.columns));
 				}
-				
+
 				if (importedData.modulesDataHash) {
 					localStorage.setItem('modulesDataHash', importedData.modulesDataHash);
 				}
-				
+
 				if (importedData.hasOwnProperty('moduleInfoClosed')) {
 					setShowInfo(!importedData.moduleInfoClosed);
 					localStorage.setItem('moduleInfoClosed', String(importedData.moduleInfoClosed));
 				}
-				
+
 				alert('Import réussi !');
 			} catch (error) {
 				console.error('Erreur lors de l\'import:', error);
@@ -246,7 +339,7 @@ const DragAndDropModules: React.FC = () => {
 			}
 		};
 		reader.readAsText(file);
-		
+
 		e.target.value = '';
 	};
 
@@ -276,6 +369,8 @@ const DragAndDropModules: React.FC = () => {
 	const handleContextMenu = (id: string) =>
 		setModalItem(Object.values(columns).flat().find(i => i.id === id) || null);
 
+	const [showMobileControls, setShowMobileControls] = useState(false);
+	const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
 	const allModules = Object.values(columns).flat();
 	const totalMinor = allModules.filter(m => !m.major).length;
@@ -306,27 +401,27 @@ const DragAndDropModules: React.FC = () => {
 		>
 			<div className="module-manager">
 				<div className="export-import-buttons">
-					<button 
-						className="export-btn" 
-						onClick={handleExportData} 
+					<button
+						className="export-btn"
+						onClick={handleExportData}
 						title="Exporter les données"
 					>
 						 📤 Exporter
 					</button>
-					
+
 					<label className="import-btn" title="Importer des données">
 						📥 Importer
-						<input 
-							type="file" 
-							accept=".json" 
-							onChange={handleImportData} 
-							style={{ display: 'none' }} 
+						<input
+							type="file"
+							accept=".json"
+							onChange={handleImportData}
+							style={{ display: 'none' }}
 						/>
 					</label>
-					
-					<button 
-						className="reset-btn" 
-						onClick={handleResetData} 
+
+					<button
+						className="reset-btn"
+						onClick={handleResetData}
 						title="Réinitialiser les modules"
 					>
 						 🔄 Réinitialiser
@@ -341,7 +436,7 @@ const DragAndDropModules: React.FC = () => {
 								className="close-info-btn"
 								onClick={closeInfo}
 								aria-label="Fermer le message d'information"
-							>
+								>
 								×
 							</button>
 						</div>
@@ -380,31 +475,47 @@ const DragAndDropModules: React.FC = () => {
 							<div key={col} className="list-box">
 								<h3>{col.toUpperCase()}</h3>
 								<div className="sublists">
-									<DroppableArea id={`${col}:${SubKey.minor}`}>
-										<div className="sublist minor">
-											<h3>Mineurs</h3>
-											{subs.minor.map(item => (
-												<DraggableItem
-													key={item.id}
-													{...item}
-													onContextMenu={handleContextMenu}
-												/>
-											))}
-										</div>
-									</DroppableArea>
+									{subs.minor.length > 0 && (
+										<DroppableArea id={`${col}:${SubKey.minor}`}>
+											<div className="sublist minor">
+												<h3>Mineurs</h3>
+												{subs.minor.map(item => (
+													<DraggableItem
+														key={item.id}
+														{...item}
+														onContextMenu={handleContextMenu}
+														onMove={handleMoveItem}
+														currentColumn={col}
+													/>
+												))}
+											</div>
+										</DroppableArea>
+									)}
 
-									<DroppableArea id={`${col}:${SubKey.major}`}>
-										<div className="sublist major">
-											<h3>Majeurs</h3>
-											{subs.major.map(item => (
-												<DraggableItem
-													key={item.id}
-													{...item}
-													onContextMenu={handleContextMenu}
-												/>
-											))}
-										</div>
-									</DroppableArea>
+									{subs.major.length > 0 && (
+										<DroppableArea id={`${col}:${SubKey.major}`}>
+											<div className="sublist major">
+												<h3>Majeurs</h3>
+												{subs.major.map(item => (
+													<DraggableItem
+														key={item.id}
+														{...item}
+														onContextMenu={handleContextMenu}
+														onMove={handleMoveItem}
+														currentColumn={col}
+													/>
+												))}
+											</div>
+										</DroppableArea>
+									)}
+
+									{subs.minor.length === 0 && subs.major.length === 0 && (
+										<DroppableArea id={`${col}:empty`}>
+											<div className="sublist empty">
+											</div>
+										</DroppableArea>
+									)}
+
 								</div>
 							</div>
 						);
